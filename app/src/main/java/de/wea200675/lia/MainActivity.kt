@@ -11,7 +11,7 @@ import de.wea200675.lia.core.CpuProfiles
 import de.wea200675.lia.core.DailyQuestions
 
 class MainActivity : Activity() {
-    private var index = 0
+    private var index = 0\n    private lateinit var profile: de.wea200675.lia.core.EncryptedLearningProfile
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val cpu = CpuProfiles.detect()
@@ -25,7 +25,7 @@ class MainActivity : Activity() {
         val admin=Button(this).apply { text="Wartung / WLAN"; textSize=16f }
         val result=TextView(this).apply { textSize=18f; gravity=Gravity.CENTER }
         fun next(){ index=(index+1)%DailyQuestions.defaults.size; question.text=DailyQuestions.defaults[index].text; answer.text.clear(); result.text="" }
-        save.setOnClickListener { result.text=if(answer.text.isNullOrBlank()) "Keine Antwort gespeichert." else "Danke. Sie bleibt lokal und wird erst nach Bestätigung gelernt."; next() }
+        save.setOnClickListener { result.text=if(answer.text.isNullOrBlank()) "Keine Antwort gespeichert." else { profile.add(de.wea200675.lia.core.LearningItem(DailyQuestions.defaults[index].id,answer.text.toString())); "Danke. Lokal verschlüsselt gespeichert; gelernt wird erst nach Bestätigung." }; next() }
         skip.setOnClickListener { result.text="Übersprungen – das ist jederzeit in Ordnung."; next() }
         admin.setOnClickListener { startActivity(Intent(this, AdminActivity::class.java)) }
         root.addView(title); root.addView(status); root.addView(question); root.addView(answer,LinearLayout.LayoutParams(-1,0,1f)); root.addView(save); root.addView(skip); root.addView(admin); root.addView(result); setContentView(root)
