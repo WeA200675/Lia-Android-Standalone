@@ -29,7 +29,7 @@ class MainActivity : Activity() {
         }
         val title = TextView(this).apply { text = "Lia"; textSize = 42f; gravity = Gravity.CENTER; setTextColor(Color.rgb(55, 40, 80)) }
         val status = TextView(this).apply {
-            text = "Offline-Grundmodus aktiv\nCPU: ${cpu.logicalCores} logische Kerne\nRAM: ${cap.ramGb} GB · Speicher frei: ${cap.freeStorageGb} GB · Leistung: $perf"
+            text = "Offline-Grundmodus aktiv\nCPU: ${cpu.logicalCores} logische Kerne\nRAM: ${(cap.ramMb / 1024)} GB · Speicher frei: ${(cap.freeInternalMb / 1024)} GB · Leistung: $perf"
             textSize = 18f; gravity = Gravity.CENTER
         }
         val chat = EditText(this).apply { hint = "Schreib mir etwas …"; textSize = 21f; minLines = 2 }
