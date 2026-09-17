@@ -18,7 +18,7 @@ class EncryptedLearningProfile(context: Context) {
         val all = readAll().toMutableList()
         if (index in all.indices) { all[index] = all[index].copy(confirmed=true); writeAll(all) }
     }
-    fun confirmed(): List<LearningItem> = readAll().filter { it.confirmed }
+    fun confirmed(): List<LearningItem> = readAll().filter { it.confirmed }\n    fun confirmAll() { writeAll(readAll().map { it.copy(confirmed=true) }) }
     fun deleteAll() { prefs.edit().clear().apply() }
     private fun readAll(): List<LearningItem> {
         val raw=prefs.getString("payload",null) ?: return emptyList()
