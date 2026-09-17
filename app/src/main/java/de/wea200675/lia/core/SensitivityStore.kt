@@ -7,7 +7,7 @@ import org.json.JSONObject
 /** Encrypted persistence for explicit sensitivity preferences. */
 class SensitivityStore(context: Context) {
     private val prefs = context.getSharedPreferences("lia_sensitivity", Context.MODE_PRIVATE)
-    private val crypto = AndroidSecureStore()
+    private val crypto = AndroidSecureStore(context, alias = "lia_profile_key")
     fun load(): SensitivityProfile {
         val raw = prefs.getString("payload", null) ?: return SensitivityProfile()
         return try {
