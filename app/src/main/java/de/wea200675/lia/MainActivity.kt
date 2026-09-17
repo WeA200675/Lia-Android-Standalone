@@ -25,20 +25,20 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(28, 28, 28, 28)
-            setBackgroundColor(Color.rgb(250, 248, 255))
+            setBackgroundColor(Color.rgb(255, 248, 240))
         }
-        val title = TextView(this).apply { text = "Lia"; textSize = 42f; gravity = Gravity.CENTER; setTextColor(Color.rgb(55, 40, 80)) }
+        val title = TextView(this).apply { text = "🌼 Lia"; textSize = 42f; gravity = Gravity.CENTER; setTextColor(Color.rgb(230, 120, 70)) }
         val status = TextView(this).apply {
             text = "Offline-Grundmodus aktiv\nCPU: ${cpu.logicalCores} logische Kerne\nRAM: ${(cap.ramMb / 1024)} GB · Speicher frei: ${(cap.freeInternalMb / 1024)} GB · Leistung: $perf"
             textSize = 18f; gravity = Gravity.CENTER
         }
-        val chat = EditText(this).apply { hint = "Schreib mir etwas …"; textSize = 21f; minLines = 2 }
-        val send = Button(this).apply { text = "Mit Lia sprechen"; textSize = 20f }
+        val chat = EditText(this).apply { hint = "Schreib mir etwas …"; textSize = 21f; minLines = 2; setPadding(16, 12, 16, 12) }
+        val send = Button(this).apply { text = "💬 Mit Lia sprechen"; textSize = 20f }
         val reply = TextView(this).apply { textSize = 21f; setPadding(0, 16, 0, 16); gravity = Gravity.CENTER }
         val question = TextView(this).apply { text = DailyQuestions.defaults[index].text; textSize = 23f; gravity = Gravity.CENTER; setPadding(0, 16, 0, 12) }
         val answer = EditText(this).apply { hint = "Tagesantwort (freiwillig)"; textSize = 20f; minLines = 2 }
-        val save = Button(this).apply { text = "Antwort lokal speichern"; textSize = 18f }
-        val skip = Button(this).apply { text = "Frage überspringen"; textSize = 18f }
+        val save = Button(this).apply { text = "💾 Antwort speichern"; textSize = 18f }
+        val skip = Button(this).apply { text = "➡️ Später beantworten"; textSize = 18f }
         val web = Button(this).apply { text = "Internet: $webMode"; textSize = 16f }
         val admin = Button(this).apply { text = "Wartung / WLAN"; textSize = 16f }
         fun next() { index = (index + 1) % DailyQuestions.defaults.size; question.text = DailyQuestions.defaults[index].text; answer.text.clear() }
