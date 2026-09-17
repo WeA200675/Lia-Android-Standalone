@@ -25,7 +25,7 @@ class AdminActivity : Activity() {
         fun refresh(){ review.text=profile.confirmed().joinToString("\n"){"✓ ${it.questionId}: ${it.answer}"} .ifBlank{"Keine bestätigten Lernpunkte."} }
         unlock.setOnClickListener { status.text=if(kiosk.disableWithPin(pin.text.toString())) "Admin-Modus geöffnet." else "PIN nicht korrekt." }
         wifi.setOnClickListener { if(!kiosk.disableWithPin(pin.text.toString())) status.text="Bitte zuerst mit der PIN freigeben." else startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }
-        confirm.setOnClickListener { status.text="Neue Antworten werden im nächsten Profil-Update bestätigbar."; refresh() }
+        confirm.setOnClickListener { profile.confirmAll(); status.text="Alle Lernpunkte bestätigt."; refresh() }
         clear.setOnClickListener { profile.deleteAll(); status.text="Lernprofil gelöscht."; refresh() }
         box.addView(title); box.addView(pin); box.addView(unlock); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(status); setContentView(box); refresh()
     }
