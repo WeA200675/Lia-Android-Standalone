@@ -7,27 +7,30 @@ import android.graphics.Color
 import android.view.Gravity
 import android.widget.*
 import de.wea200675.lia.admin.AdminActivity
-import de.wea200675.lia.core.CpuProfiles
-import de.wea200675.lia.core.DailyQuestions
+import de.wea200675.lia.core.*
 
 class MainActivity : Activity() {
-    private var index = 0\n    private lateinit var profile: de.wea200675.lia.core.EncryptedLearningProfile
+    private var index = 0
+    private lateinit var profile: EncryptedLearningProfile
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val cpu = CpuProfiles.detect()
-        val root = LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setPadding(32,32,32,32); setBackgroundColor(Color.rgb(250,248,255)) }
-        val title=TextView(this).apply { text="Lia"; textSize=42f; gravity=Gravity.CENTER; setTextColor(Color.rgb(55,40,80)) }
-        val status=TextView(this).apply { text="Offline-Grundmodus aktiv\nCPU: ${cpu.logicalCores} logische Kerne"; textSize=19f; gravity=Gravity.CENTER; setPadding(0,24,0,24) }
-        val question=TextView(this).apply { text=DailyQuestions.defaults[index].text; textSize=25f; gravity=Gravity.CENTER; setPadding(0,24,0,16) }
-        val answer=EditText(this).apply { hint="Deine Antwort (freiwillig)"; textSize=21f; minLines=3; gravity=Gravity.TOP }
-        val save=Button(this).apply { text="Antwort lokal speichern"; textSize=20f }
-        val skip=Button(this).apply { text="Überspringen"; textSize=20f }
-        val admin=Button(this).apply { text="Wartung / WLAN"; textSize=16f }
-        val result=TextView(this).apply { textSize=18f; gravity=Gravity.CENTER }
-        fun next(){ index=(index+1)%DailyQuestions.defaults.size; question.text=DailyQuestions.defaults[index].text; answer.text.clear(); result.text="" }
-        save.setOnClickListener { result.text=if(answer.text.isNullOrBlank()) "Keine Antwort gespeichert." else { profile.add(de.wea200675.lia.core.LearningItem(DailyQuestions.defaults[index].id,answer.text.toString())); "Danke. Lokal verschlüsselt gespeichert; gelernt wird erst nach Bestätigung." }; next() }
-        skip.setOnClickListener { result.text="Übersprungen – das ist jederzeit in Ordnung."; next() }
-        admin.setOnClickListener { startActivity(Intent(this, AdminActivity::class.java)) }
-        root.addView(title); root.addView(status); root.addView(question); root.addView(answer,LinearLayout.LayoutParams(-1,0,1f)); root.addView(save); root.addView(skip); root.addView(admin); root.addView(result); setContentView(root)
+        super.onCreate(savedInstanceState); profile=EncryptedLearningProfile(this)
+        val router=ConversationRouter(); val cpu=CpuProfiles.detect()
+        val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(28,28,28,28);setBackgroundColor(Color.rgb(250,248,255))}
+        val title=TextView(this).apply{text="Lia";textSize=42f;gravity=Gravity.CENTER;setTextColor(Color.rgb(55,40,80))}
+        val status=TextView(this).apply{text="Offline-Grundmodus aktiv\nCPU: ${cpu.logicalCores} logische Kerne";textSize=18f;gravity=Gravity.CENTER}
+        val chat=EditText(this).apply{hint="Schreib mir etwas …";textSize=21f;minLines=2}
+        val send=Button(this).apply{text="Mit Lia sprechen";textSize=20f}
+        val reply=TextView(this).apply{textSize=21f;setPadding(0,16,0,16);gravity=Gravity.CENTER}
+        val question=TextView(this).apply{text=DailyQuestions.defaults[index].text;textSize=23f;gravity=Gravity.CENTER;setPadding(0,16,0,12)}
+        val answer=EditText(this).apply{hint="Tagesantwort (freiwillig)";textSize=20f;minLines=2}
+        val save=Button(this).apply{text="Antwort lokal speichern";textSize=18f}
+        val skip=Button(this).apply{text="Frage überspringen";textSize=18f}
+        val admin=Button(this).apply{text="Wartung / WLAN";textSize=16f}
+        fun next(){index=(index+1)%DailyQuestions.defaults.size;question.text=DailyQuestions.defaults[index].text;answer.text.clear()}
+        send.setOnClickListener{val t=chat.text.toString(); reply.text=if(t.isBlank())"Ich höre dir gern zu." else router.offlineReply(router.classify(t)); chat.text.clear()}
+        save.setOnClickListener{if(answer.text.isNullOrBlank()) reply.text="Keine Antwort gespeichert." else{profile.add(LearningItem(DailyQuestions.defaults[index].id,answer.text.toString()));reply.text="Danke. Lokal verschlüsselt gespeichert.";};next()}
+        skip.setOnClickListener{reply.text="Übersprungen – das ist jederzeit in Ordnung.";next()}
+        admin.setOnClickListener{startActivity(Intent(this,AdminActivity::class.java))}
+        root.addView(title);root.addView(status);root.addView(chat,LinearLayout.LayoutParams(-1,-2));root.addView(send);root.addView(reply);root.addView(question);root.addView(answer,LinearLayout.LayoutParams(-1,0,1f));root.addView(save);root.addView(skip);root.addView(admin);setContentView(root)
     }
 }
