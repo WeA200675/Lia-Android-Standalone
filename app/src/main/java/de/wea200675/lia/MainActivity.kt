@@ -14,7 +14,7 @@ class MainActivity : Activity() {
     private lateinit var profile: EncryptedLearningProfile
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState); profile=EncryptedLearningProfile(this)
-        val router=ConversationRouter(); val cpu=CpuProfiles.detect(); var webMode=WebAccessMode.OFFLINE
+        val router=ConversationRouter(); val cpu=CpuProfiles.detect(); val webStore=WebModeStore(this); var webMode=webStore.get()
         val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(28,28,28,28);setBackgroundColor(Color.rgb(250,248,255))}
         val title=TextView(this).apply{text="Lia";textSize=42f;gravity=Gravity.CENTER;setTextColor(Color.rgb(55,40,80))}
         val status=TextView(this).apply{text="Offline-Grundmodus aktiv\nCPU: ${cpu.logicalCores} logische Kerne";textSize=18f;gravity=Gravity.CENTER}
@@ -25,12 +25,12 @@ class MainActivity : Activity() {
         val answer=EditText(this).apply{hint="Tagesantwort (freiwillig)";textSize=20f;minLines=2}
         val save=Button(this).apply{text="Antwort lokal speichern";textSize=18f}
         val skip=Button(this).apply{text="Frage überspringen";textSize=18f}
-        val web=Button(this).apply{text="Internet: OFFLINE";textSize=16f}\n        val admin=Button(this).apply{text="Wartung / WLAN";textSize=16f}
+        val web=Button(this).apply{text="Internet: $webMode";textSize=16f}\n        val admin=Button(this).apply{text="Wartung / WLAN";textSize=16f}
         fun next(){index=(index+1)%DailyQuestions.defaults.size;question.text=DailyQuestions.defaults[index].text;answer.text.clear()}
         send.setOnClickListener{val t=chat.text.toString(); reply.text=if(t.isBlank())"Ich höre dir gern zu." else router.offlineReply(router.classify(t)); chat.text.clear()}
         save.setOnClickListener{if(answer.text.isNullOrBlank()) reply.text="Keine Antwort gespeichert." else{profile.add(LearningItem(DailyQuestions.defaults[index].id,answer.text.toString()));reply.text="Danke. Lokal verschlüsselt gespeichert.";};next()}
         skip.setOnClickListener{reply.text="Übersprungen – das ist jederzeit in Ordnung.";next()}
-        web.setOnClickListener { webMode=when(webMode){WebAccessMode.OFFLINE->WebAccessMode.AUTO_ANONYMIZED_GENERIC;WebAccessMode.AUTO_ANONYMIZED_GENERIC->WebAccessMode.ASK_BEFORE_PERSONAL;else->WebAccessMode.OFFLINE}; web.text="Internet: $webMode" }\n        admin.setOnClickListener{startActivity(Intent(this,AdminActivity::class.java))}
+        web.setOnClickListener { webMode=when(webMode){WebAccessMode.OFFLINE->WebAccessMode.AUTO_ANONYMIZED_GENERIC;WebAccessMode.AUTO_ANONYMIZED_GENERIC->WebAccessMode.ASK_BEFORE_PERSONAL;else->WebAccessMode.OFFLINE}; webStore.set(webMode); web.text="Internet: $webMode" }\n        admin.setOnClickListener{startActivity(Intent(this,AdminActivity::class.java))}
         root.addView(title);root.addView(status);root.addView(chat,LinearLayout.LayoutParams(-1,-2));root.addView(send);root.addView(reply);root.addView(question);root.addView(answer,LinearLayout.LayoutParams(-1,0,1f));root.addView(save);root.addView(skip);root.addView(web);root.addView(admin);setContentView(root)
     }
 }
