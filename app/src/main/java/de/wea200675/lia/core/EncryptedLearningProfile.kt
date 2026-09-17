@@ -8,7 +8,7 @@ import org.json.JSONObject
 /** Versioned, encrypted profile store. Only confirmed entries are returned for prompting. */
 class EncryptedLearningProfile(context: Context) {
     private val prefs = context.getSharedPreferences("lia_learning_profile", Context.MODE_PRIVATE)
-    private val crypto = AndroidSecureStore()
+    private val crypto = AndroidSecureStore(context, alias = "lia_profile_key")
     fun add(item: LearningItem) { val all = readAll().toMutableList(); all += item; writeAll(all) }
     fun confirm(index: Int) { val all = readAll().toMutableList(); if (index in all.indices) { all[index] = all[index].copy(confirmed = true); writeAll(all) } }
     fun confirmed(): List<LearningItem> = readAll().filter { it.confirmed }
