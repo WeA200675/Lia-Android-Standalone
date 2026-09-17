@@ -8,8 +8,8 @@ import org.junit.Test
 class RuntimeCoordinatorTest {
     @Test fun failureUpdatesRecoveryDecisionAndBudget() {
         val coordinator = RuntimeCoordinator(
-            ModelSpec("primary.gguf", "x"),
-            ModelSpec("recovery.gguf", "y"),
+            ModelSpec("primary", "primary.gguf", "x", 4096),
+            ModelSpec("recovery", "recovery.gguf", "y", 2048),
             physicalCores = 4,
             logicalThreads = 8
         )
