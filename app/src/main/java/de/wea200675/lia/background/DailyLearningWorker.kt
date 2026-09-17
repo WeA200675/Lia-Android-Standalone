@@ -4,18 +4,27 @@ import android.content.Context
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.NetworkType
-import androidx.work.WorkManager
 import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import de.wea200675.lia.core.AndroidSecureStore
 import de.wea200675.lia.core.DailyTrainingPlanner
+import de.wea200675.lia.core.TrainingCache
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 
 class DailyLearningWorker(appContext: Context, params: WorkerParameters) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result {
-        // Preparation is intentionally side-effect free here; UI presents prompts later.
-        DailyTrainingPlanner.forDate(LocalDate.now())
-        return Result.success()
+        return runCatching {
+            val today = LocalDate.now()
+            val cache = TrainingCache(AndroidSecureStore(applicationContext))
+            if (cache.load()?.date != today) {
+                cache.save(DailyTrainingPlanner.forDate(today))
+            }
+        }.fold(
+            onSuccess = { Result.success() },
+            onFailure = { Result.failure() }
+        )
     }
 
     companion object {
