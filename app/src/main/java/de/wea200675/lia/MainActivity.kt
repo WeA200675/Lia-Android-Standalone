@@ -14,6 +14,7 @@ import android.view.Gravity
 import android.widget.*
 import de.wea200675.lia.admin.AdminActivity
 import de.wea200675.lia.core.*
+import de.wea200675.lia.background.DailyLearningWorker
 
 class MainActivity : Activity() {
     private var index = 0
@@ -23,6 +24,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         profile = EncryptedLearningProfile(this)
+        DailyLearningWorker.schedule(this)
         speaker = TextToSpeech(this) { if (it == TextToSpeech.SUCCESS) speaker?.language = Locale.GERMAN }
         val router = ConversationRouter()
         val cpu = CpuProfiles.detect()
