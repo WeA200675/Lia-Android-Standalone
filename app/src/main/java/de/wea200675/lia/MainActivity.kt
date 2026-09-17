@@ -14,7 +14,7 @@ class MainActivity : Activity() {
     private lateinit var profile: EncryptedLearningProfile
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState); profile=EncryptedLearningProfile(this)
-        val router=ConversationRouter(); val cpu=CpuProfiles.detect(); val webStore=WebModeStore(this); var webMode=webStore.get()
+        val router=ConversationRouter(); val cpu=CpuProfiles.detect(); val cap=DeviceCapabilityProbe.read(this); val perf=ResourceGovernor(this).level(); val webStore=WebModeStore(this); var webMode=webStore.get()
         val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(28,28,28,28);setBackgroundColor(Color.rgb(250,248,255))}
         val title=TextView(this).apply{text="Lia";textSize=42f;gravity=Gravity.CENTER;setTextColor(Color.rgb(55,40,80))}
         val status=TextView(this).apply{text="Offline-Grundmodus aktiv\nCPU: ${cpu.logicalCores} logische Kerne";textSize=18f;gravity=Gravity.CENTER}
