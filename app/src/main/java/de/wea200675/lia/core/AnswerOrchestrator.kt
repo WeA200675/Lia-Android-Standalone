@@ -5,7 +5,8 @@ enum class AnswerSource { SAFETY, LOCAL_AI, OFFLINE_FALLBACK }
 data class OrchestratedAnswer(
     val text: String,
     val source: AnswerSource,
-    val webContextUsed: Boolean = false
+    val webContextUsed: Boolean = false,
+    val knowledgeProvenance: KnowledgeProvenance? = null
 )
 
 /**
@@ -31,13 +32,23 @@ class AnswerOrchestrator(
         }
 
         val style = router.classify(boundedText)
-        val webContext = if (style == ConversationStyle.KNOWLEDGE && webGateway != null) {
-            webGateway.query(Anonymizer.redact(boundedText))
-                .getOrNull()
-                ?.let(UntrustedKnowledgeBoundary::sanitize)
+        val webResult = if (style == ConversationStyle.KNOWLEDGE && webGateway != null) {
+            val redacted = Anonymizer.redact(boundedText)
+            if (webGateway is ProvenanceWebGateway) {
+                webGateway.queryWithProvenance(redacted).getOrNull()?.let { bundle ->
+                    UntrustedKnowledgeBoundary.sanitize(bundle.text)?.let {
+                        it to bundle.provenance
+                    }
+                }
+            } else {
+                webGateway.query(redacted).getOrNull()
+                    ?.let(UntrustedKnowledgeBoundary::sanitize)
+                    ?.let { it to null }
+            }
         } else {
             null
         }
+        val webContext = webResult?.first
 
         val enrichedPrompt = if (webContext == null) {
             prompt
@@ -54,7 +65,8 @@ class AnswerOrchestrator(
             return OrchestratedAnswer(
                 text = localAnswer,
                 source = AnswerSource.LOCAL_AI,
-                webContextUsed = webContext != null
+                webContextUsed = webContext != null,
+                knowledgeProvenance = webResult?.second
             )
         }
 

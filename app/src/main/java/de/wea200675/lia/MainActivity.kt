@@ -97,6 +97,19 @@ class MainActivity : Activity() {
             reply.text = text
             speaker?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "lia-reply")
         }
+        fun presentAnswer(result: OrchestratedAnswer) {
+            val provenance = result.knowledgeProvenance
+            val sourceNote = if (provenance == null) "" else {
+                val origin = if (provenance.origin == KnowledgeOrigin.LIVE) {
+                    "frisch abgerufen"
+                } else {
+                    "aus dem flüchtigen Wissenspuffer"
+                }
+                "\n\nℹ Quellen: ${provenance.sourceLabels.joinToString(", ")} · $origin"
+            }
+            reply.text = result.text + sourceNote
+            speaker?.speak(result.text, TextToSpeech.QUEUE_FLUSH, null, "lia-reply")
+        }
         fun handleConversation(text: String) {
             val boundedText = text.trim()
             if (boundedText.isEmpty()) {
@@ -111,7 +124,7 @@ class MainActivity : Activity() {
                     onlineAllowed = webMode != WebAccessMode.OFFLINE
                 )
                 val result = answerOrchestrator.answer(boundedText, prompt)
-                presentReply(result.text)
+                presentAnswer(result)
             }
         }
         send.setOnClickListener {
