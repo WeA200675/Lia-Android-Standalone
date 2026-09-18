@@ -60,6 +60,16 @@ class AnswerOrchestratorTest {
         assertTrue(promptToModel.contains("Lichtbrechung"))
     }
 
+    @Test fun offlineRuntimeUsesRetrievedKnowledgeInsteadOfGenericMode() {
+        val web = gateway { Result.success("Ein Regenbogen entsteht durch Lichtbrechung.") }
+        val answer = runSuspend {
+            AnswerOrchestrator(SafeOfflineRuntime(), web).answer("Warum entsteht ein Regenbogen?", "prompt")
+        }
+        assertEquals(AnswerSource.OFFLINE_FALLBACK, answer.source)
+        assertEquals("Ein Regenbogen entsteht durch Lichtbrechung.", answer.text)
+        assertTrue(answer.webContextUsed)
+    }
+
     @Test fun localFailureFallsBackWithoutWebForPracticalHelp() {
         var webCalled = false
         val runtime = runtime { Result.failure(IllegalStateException("Modell aus")) }

@@ -18,6 +18,7 @@ data class ModelSpec(
 
 interface ModelRuntime { suspend fun generate(prompt:String):Result<String>; fun isReady():Boolean }
 class SafeOfflineRuntime : ModelRuntime {
- override suspend fun generate(prompt:String):Result<String> = Result.success("Ich bin im lokalen Grundmodus. Ich kann dir bei Alltag, Erinnerungen und Fragen helfen.")
+ companion object { const val RESPONSE = "Ich bin im lokalen Grundmodus. Ich kann dir bei Alltag, Erinnerungen und Fragen helfen." }
+ override suspend fun generate(prompt:String):Result<String> = Result.success(RESPONSE)
  override fun isReady()=true
 }
