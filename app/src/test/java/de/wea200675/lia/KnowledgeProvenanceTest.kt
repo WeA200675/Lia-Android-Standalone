@@ -11,9 +11,7 @@ import de.wea200675.lia.core.KnowledgeSourceLabels
 import de.wea200675.lia.core.ModelRuntime
 import de.wea200675.lia.core.ProvenanceWebGateway
 import de.wea200675.lia.core.SafeWikipediaGateway
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.EmptyCoroutineContext
-import kotlin.coroutines.startCoroutine
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -41,7 +39,7 @@ class KnowledgeProvenanceTest {
             override fun isReady() = true
         }
 
-        val answer = runSuspend {
+        val answer = runBlocking {
             AnswerOrchestrator(runtime, gateway).answer("Warum ist der Himmel blau?", "Grundprompt")
         }
 
@@ -64,7 +62,7 @@ class KnowledgeProvenanceTest {
             clock = { 5678L }
         )
 
-        val bundle = runSuspend { gateway.queryWithProvenance(query).getOrThrow() }
+        val bundle = runBlocking { gateway.queryWithProvenance(query).getOrThrow() }
 
         assertEquals(KnowledgeOrigin.SESSION_CACHE, bundle.provenance.origin)
         assertEquals(5678L, bundle.provenance.retrievedAtEpochMs)
@@ -81,7 +79,7 @@ class KnowledgeProvenanceTest {
             override fun isReady() = true
         }
 
-        val answer = runSuspend {
+        val answer = runBlocking {
             AnswerOrchestrator(runtime, gateway).answer("Warum regnet es?", "Prompt")
         }
 
@@ -89,12 +87,4 @@ class KnowledgeProvenanceTest {
         assertEquals(null, answer.knowledgeProvenance)
     }
 
-    private fun <T> runSuspend(block: suspend () -> T): T {
-        var outcome: Result<T>? = null
-        block.startCoroutine(object : Continuation<T> {
-            override val context = EmptyCoroutineContext
-            override fun resumeWith(result: Result<T>) { outcome = result }
-        })
-        return checkNotNull(outcome).getOrThrow()
-    }
 }
