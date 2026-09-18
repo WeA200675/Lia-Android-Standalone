@@ -43,7 +43,7 @@ class MainActivity : Activity() {
         val webStore = WebModeStore(this)
         var webMode = webStore.get()
         val cachePlan = KnowledgeCacheCapacity.recommend(
-            ramMb = cap.ramMb,
+            ramMb = cap.ramMb.toLong(),
             sourceCount = KnowledgeSourceCatalog.sources.size
         )
         answerOrchestrator = AnswerOrchestrator(
