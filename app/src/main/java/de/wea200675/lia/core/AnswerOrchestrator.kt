@@ -57,13 +57,14 @@ class AnswerOrchestrator(
         val webResult = retainedResult ?: if (style == ConversationStyle.KNOWLEDGE && webGateway != null) {
             if (webGateway is ProvenanceWebGateway) {
                 webGateway.queryWithProvenance(redacted).getOrNull()?.let { bundle ->
-                    UntrustedKnowledgeBoundary.sanitize(bundle.text)?.let {
+                    UntrustedKnowledgeBoundary.sanitize(bundle.text)?.takeIf { KnowledgeRelevance.accepts(boundedText, it) }?.let {
                         it to bundle.provenance
                     }
                 }
             } else {
                 webGateway.query(redacted).getOrNull()
                     ?.let(UntrustedKnowledgeBoundary::sanitize)
+                    ?.takeIf { KnowledgeRelevance.accepts(boundedText, it) }
                     ?.let { it to null }
             }
         } else null
