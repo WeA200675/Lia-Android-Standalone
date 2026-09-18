@@ -9,6 +9,11 @@ import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import java.time.LocalDate
 import java.util.Locale
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import android.os.Bundle
 import android.graphics.Color
 import android.view.Gravity
@@ -22,6 +27,8 @@ class MainActivity : Activity() {
     private lateinit var profile: EncryptedLearningProfile
     private var recognizer: SpeechRecognizer? = null
     private var speaker: TextToSpeech? = null
+    private lateinit var localRuntime: SupervisedLocalRuntime
+    private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         profile = EncryptedLearningProfile(this)
@@ -31,7 +38,7 @@ class MainActivity : Activity() {
         val cpu = CpuProfiles.detect()
         val cap = DeviceCapabilityProbe.read(this)
         val perf = ResourceGovernor(this).level()
-        val localRuntime = ModelRuntimeBootstrap(this).createSupervised()
+        localRuntime = ModelRuntimeBootstrap(this).createSupervised()
         val webStore = WebModeStore(this)
         var webMode = webStore.get()
         val today = LocalDate.now()
@@ -73,12 +80,48 @@ class MainActivity : Activity() {
             showCurrent()
         }
         showCurrent()
-        send.setOnClickListener { val t = chat.text.toString(); reply.text = if (t.isBlank()) "Ich höre dir gern zu." else router.offlineReply(router.classify(t)); speaker?.speak(reply.text, TextToSpeech.QUEUE_FLUSH, null, "lia-reply"); chat.text.clear() }
+        fun presentReply(text: String) {
+            reply.text = text
+            speaker?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "lia-reply")
+        }
+        send.setOnClickListener {
+            val t = chat.text.toString()
+            if (t.isBlank()) {
+                presentReply("Ich höre dir gern zu.")
+            } else if (!localRuntime.isNativeReady()) {
+                presentReply(router.offlineReply(router.classify(t)))
+            } else {
+                reply.text = "Ich denke kurz nach …"
+                uiScope.launch {
+                    val answer = localRuntime.generate(t).getOrElse {
+                        router.offlineReply(router.classify(t))
+                    }
+                    presentReply(answer)
+                }
+            }
+            chat.text.clear()
+        }
         listen.setOnClickListener {
             if (!SpeechRecognizer.isRecognitionAvailable(this)) { reply.text = "Spracherkennung ist nicht verfügbar. Du kannst mich jederzeit schreiben."; return@setOnClickListener }
             if (checkSelfPermission("android.permission.RECORD_AUDIO") != PackageManager.PERMISSION_GRANTED) { requestPermissions(arrayOf("android.permission.RECORD_AUDIO"), 42); return@setOnClickListener }
             if (recognizer == null) recognizer = SpeechRecognizer.createSpeechRecognizer(this).apply { setRecognitionListener(object : RecognitionListener {
-                override fun onResults(results: android.os.Bundle) { val t = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty(); chat.setText(t); reply.text = if (t.isBlank()) "Ich habe nichts verstanden." else router.offlineReply(router.classify(t)); speaker?.speak(reply.text, TextToSpeech.QUEUE_FLUSH, null, "lia-reply") }
+                override fun onResults(results: android.os.Bundle) {
+                    val t = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+                    chat.setText(t)
+                    if (t.isBlank()) {
+                        presentReply("Ich habe nichts verstanden.")
+                    } else if (!localRuntime.isNativeReady()) {
+                        presentReply(router.offlineReply(router.classify(t)))
+                    } else {
+                        reply.text = "Ich denke kurz nach …"
+                        uiScope.launch {
+                            val answer = localRuntime.generate(t).getOrElse {
+                                router.offlineReply(router.classify(t))
+                            }
+                            presentReply(answer)
+                        }
+                    }
+                }
                 override fun onError(error: Int) { reply.text = "Ich konnte dich gerade nicht verstehen. Bitte versuche es noch einmal oder schreibe mir." }
                 override fun onReadyForSpeech(p: android.os.Bundle?) { reply.text = "Ich höre zu …" }
                 override fun onBeginningOfSpeech() {}
@@ -103,5 +146,13 @@ class MainActivity : Activity() {
         web.setOnClickListener { webMode = when (webMode) { WebAccessMode.OFFLINE -> WebAccessMode.AUTO_ANONYMIZED_GENERIC; WebAccessMode.AUTO_ANONYMIZED_GENERIC -> WebAccessMode.ASK_BEFORE_PERSONAL; else -> WebAccessMode.OFFLINE }; webStore.set(webMode); web.text = "Internet: $webMode" }
         admin.setOnClickListener { startActivity(Intent(this, AdminActivity::class.java)) }
         root.addView(title); root.addView(status); root.addView(chat, LinearLayout.LayoutParams(-1, -2)); root.addView(listen); root.addView(send); root.addView(reply); root.addView(question); root.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); root.addView(save); root.addView(skip); root.addView(web); root.addView(admin); setContentView(root)
+    }
+
+    override fun onDestroy() {
+        uiScope.cancel()
+        recognizer?.destroy()
+        speaker?.shutdown()
+        localRuntime.close()
+        super.onDestroy()
     }
 }
