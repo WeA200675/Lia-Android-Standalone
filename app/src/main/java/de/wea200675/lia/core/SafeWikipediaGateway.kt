@@ -12,7 +12,8 @@ import org.json.JSONObject
  * for source compatibility; all reachable hosts come from the audited catalog.
  */
 class SafeWikipediaGateway(
-    private val enabled: () -> Boolean
+    private val enabled: () -> Boolean,
+    private val cache: BoundedKnowledgeCache = BoundedKnowledgeCache()
 ) : WebGateway {
     override suspend fun query(anonymizedQuery: String): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
@@ -20,11 +21,15 @@ class SafeWikipediaGateway(
             val approved = requireNotNull(OutboundQueryPolicy.approved(anonymizedQuery)) {
                 "Query is not eligible for anonymous Internet lookup"
             }
-            val results = KnowledgeSourceCatalog.select(approved)
-                .mapNotNull { source -> runCatching { querySource(source, approved) }.getOrNull() }
-                .take(MAX_RESULTS)
-            check(results.isNotEmpty()) { "No curated knowledge result" }
-            results.joinToString("\n\n")
+            cache.get(approved) ?: run {
+                val results = KnowledgeSourceCatalog.select(approved)
+                    .mapNotNull { source -> runCatching { querySource(source, approved) }.getOrNull() }
+                    .take(MAX_RESULTS)
+                check(results.isNotEmpty()) { "No curated knowledge result" }
+                results.joinToString("\n\n").also {
+                    cache.put(approved, it, KnowledgeFreshnessPolicy.ttlMillis(approved))
+                }
+            }
         }
     }
 
