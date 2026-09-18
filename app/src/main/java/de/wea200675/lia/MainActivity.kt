@@ -26,6 +26,7 @@ class MainActivity : Activity() {
     private lateinit var profile: EncryptedLearningProfile
     private var recognizer: SpeechRecognizer? = null
     private var speaker: TextToSpeech? = null
+    private lateinit var localRuntime: SupervisedLocalRuntime
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,7 +37,7 @@ class MainActivity : Activity() {
         val cpu = CpuProfiles.detect()
         val cap = DeviceCapabilityProbe.read(this)
         val perf = ResourceGovernor(this).level()
-        val localRuntime = ModelRuntimeBootstrap(this).createSupervised()
+        localRuntime = ModelRuntimeBootstrap(this).createSupervised()
         val webStore = WebModeStore(this)
         var webMode = webStore.get()
         val today = LocalDate.now()
