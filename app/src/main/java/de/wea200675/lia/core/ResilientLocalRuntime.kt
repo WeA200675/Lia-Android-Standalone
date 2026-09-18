@@ -1,7 +1,9 @@
 package de.wea200675.lia.core
 
+import java.io.File
+
 /**
- * Runtime facade that prefers verified native inference and never loses the safe offline path.
+ * Runtime facade that prefers hash-verified native inference and never loses the safe offline path.
  */
 class ResilientLocalRuntime(
     private val native: NativeInference,
@@ -9,8 +11,11 @@ class ResilientLocalRuntime(
 ) : ModelRuntime {
     private var nativeReady = false
 
-    fun loadVerifiedModel(spec: ModelSpec): Boolean {
-        nativeReady = native.load(spec)
+    fun loadModel(spec: ModelSpec, file: File): Boolean {
+        native.close()
+        nativeReady = false
+        val verified = VerifiedModel.from(spec, file) ?: return false
+        nativeReady = runCatching { native.load(verified) }.getOrDefault(false)
         return nativeReady
     }
 
