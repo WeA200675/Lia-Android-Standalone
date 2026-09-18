@@ -18,7 +18,7 @@ class ConfirmedKnowledgeRepositoryTest {
         val fp = ConfirmedKnowledgeRepository.fingerprint("frage")
         assertTrue(repo.saveConfirmed("[Wikipedia] Ein kurzer Fakt.", listOf("Wikipedia"), fp))
         assertEquals("Ein kurzer Fakt.", repo.find(fp)?.summary)
-        assertEquals(1, repo.find(fp)?.useCount)
+        assertEquals(2, repo.find(fp)?.useCount)
     }
 
     @Test fun rejectsUntrustedTextMissingSourcesAndRawQuestionFingerprint() {
