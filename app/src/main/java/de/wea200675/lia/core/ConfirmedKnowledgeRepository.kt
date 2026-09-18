@@ -24,7 +24,7 @@ class ConfirmedKnowledgeRepository(
             .replace(Regex("""^\[[^]]{1,120}]\s*"""), "")
             .trim()
         if (summary.length < 3) return false
-        val labels = sourceLabels.map { it.trim() }.filter { it.isNotEmpty() }.distinct().take(5)
+        val labels = sanitizeLabels(sourceLabels)
         if (labels.isEmpty() || !questionFingerprint.matches(HEX) || ttlMs !in MIN_TTL_MS..MAX_TTL_MS) return false
         val now = clock(); val current = loadInternal(now).toMutableList()
         current.removeAll { it.fingerprint == questionFingerprint }
@@ -43,14 +43,56 @@ class ConfirmedKnowledgeRepository(
     fun all(): List<ConfirmedKnowledge> = prune(loadInternal(clock()), clock())
     fun clear() = store.delete(key)
 
-    private fun loadInternal(now: Long): List<ConfirmedKnowledge> = try {
-        val text = store.get(key)?.toString(StandardCharsets.UTF_8) ?: return emptyList()
-        text.lineSequence().mapNotNull { line ->
-            val p = line.split("|"); if (p.size != 7) return@mapNotNull null
-            val item = ConfirmedKnowledge(p[0], dec(p[1]), p[2].split(",").filter { it.isNotEmpty() }.map(::dec), p[3].toLong(), p[4].toLong(), p[5].toInt(), p[6].toLong())
-            if (item.fingerprint.matches(HEX) && item.summary.isNotBlank() && item.sourceLabels.isNotEmpty() && item.expiresAtEpochMs > now) item else null
+    private fun loadInternal(now: Long): List<ConfirmedKnowledge> {
+        // Keystore authentication/tamper failures must propagate; treating them as an empty store would hide corruption.
+        val raw = store.get(key) ?: return emptyList()
+        var discarded = false
+        val decoded = String(raw, StandardCharsets.UTF_8)
+        val parsed = decoded.lineSequence().filter { it.isNotBlank() }.mapNotNull { line ->
+            val item = runCatching { decode(line) }.getOrNull()
+            val valid = item?.let(::validateStored)
+            if (valid == null) discarded = true
+            valid
+        }.filter { item ->
+            val active = item.expiresAtEpochMs > now
+            if (!active) discarded = true
+            active
         }.toList()
-    } catch (_: Exception) { emptyList() }
+        if (discarded) persist(prune(parsed, now))
+        return parsed
+    }
+
+    private fun decode(line: String): ConfirmedKnowledge {
+        val p = line.split("|")
+        require(p.size == 7)
+        return ConfirmedKnowledge(
+            fingerprint = p[0],
+            summary = dec(p[1]),
+            sourceLabels = p[2].split(",").filter(String::isNotEmpty).map(::dec),
+            createdAtEpochMs = p[3].toLong(),
+            lastUsedAtEpochMs = p[4].toLong(),
+            useCount = p[5].toInt(),
+            expiresAtEpochMs = p[6].toLong()
+        )
+    }
+
+    private fun validateStored(item: ConfirmedKnowledge): ConfirmedKnowledge? {
+        if (!item.fingerprint.matches(HEX)) return null
+        val summary = UntrustedKnowledgeBoundary.sanitize(item.summary) ?: return null
+        val labels = sanitizeLabels(item.sourceLabels)
+        if (summary != item.summary || labels.size != item.sourceLabels.size || labels.isEmpty()) return null
+        if (item.createdAtEpochMs < 0L || item.lastUsedAtEpochMs < item.createdAtEpochMs) return null
+        if (item.expiresAtEpochMs <= item.createdAtEpochMs || item.useCount < 0) return null
+        return item.copy(sourceLabels = labels)
+    }
+
+    private fun sanitizeLabels(labels: List<String>): List<String> = labels.asSequence()
+        .map(String::trim)
+        .filter { it.length in 1..120 }
+        .filter { label -> label.none { it.isISOControl() || it in BIDI_CONTROLS } }
+        .distinct()
+        .take(5)
+        .toList()
 
     private fun persist(items: List<ConfirmedKnowledge>) {
         if (items.isEmpty()) { store.delete(key); return }
@@ -74,6 +116,7 @@ class ConfirmedKnowledgeRepository(
 
     companion object {
         private val HEX = Regex("[a-f0-9]{64}")
+        private val BIDI_CONTROLS = setOf('\u202A', '\u202B', '\u202C', '\u202D', '\u202E', '\u2066', '\u2067', '\u2068', '\u2069')
         const val DEFAULT_TTL_MS = 180L * 24 * 60 * 60 * 1000
         const val MIN_TTL_MS = 60 * 60 * 1000L
         const val MAX_TTL_MS = 365L * 24 * 60 * 60 * 1000
