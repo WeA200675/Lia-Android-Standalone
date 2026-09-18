@@ -1,6 +1,6 @@
 package de.wea200675.lia.core
 
-enum class AnswerSource { SAFETY, LOCAL_AI, OFFLINE_FALLBACK }
+enum class AnswerSource { SAFETY, LOCAL_AI, CONFIRMED_KNOWLEDGE, OFFLINE_FALLBACK }
 
 data class OrchestratedAnswer(
     val text: String,
@@ -75,6 +75,15 @@ class AnswerOrchestrator(
                 source = AnswerSource.LOCAL_AI,
                 webContextUsed = webContext != null,
                 knowledgeProvenance = webResult?.second
+            )
+        }
+
+        if (retainedResult != null) {
+            return OrchestratedAnswer(
+                text = retainedResult.first,
+                source = AnswerSource.CONFIRMED_KNOWLEDGE,
+                webContextUsed = true,
+                knowledgeProvenance = retainedResult.second
             )
         }
 

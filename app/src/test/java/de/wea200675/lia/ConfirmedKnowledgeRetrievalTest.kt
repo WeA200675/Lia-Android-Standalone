@@ -48,6 +48,38 @@ class ConfirmedKnowledgeRetrievalTest {
         assertEquals(listOf("Wikipedia"), answer.knowledgeProvenance?.sourceLabels)
     }
 
+    @Test fun modelFailureReturnsExactConfirmedSummaryWithSources() {
+        val repository = ConfirmedKnowledgeRepository(MemoryStore())
+        val question = "Warum entsteht ein Regenbogen?"
+        val summary = "Ein Regenbogen entsteht durch Brechung und Reflexion des Lichts in Wassertropfen."
+        assertTrue(repository.saveConfirmed(
+            summary,
+            listOf("Wikipedia", "Wikidata"),
+            ConfirmedKnowledgeRepository.fingerprint(Anonymizer.redact(question))
+        ))
+        var webCalled = false
+        val web = object : WebGateway {
+            override suspend fun query(anonymizedQuery: String): Result<String> {
+                webCalled = true
+                return Result.success("Netzwerktext")
+            }
+        }
+        val runtime = object : ModelRuntime {
+            override suspend fun generate(prompt: String) = Result.failure<String>(IllegalStateException("Modell ausgefallen"))
+            override fun isReady() = false
+        }
+
+        val answer = runBlocking {
+            AnswerOrchestrator(runtime, web, confirmedKnowledge = repository).answer(question, "Grundprompt")
+        }
+
+        assertFalse(webCalled)
+        assertEquals(AnswerSource.CONFIRMED_KNOWLEDGE, answer.source)
+        assertEquals(summary, answer.text)
+        assertEquals(KnowledgeOrigin.CONFIRMED_STORE, answer.knowledgeProvenance?.origin)
+        assertEquals(listOf("Wikipedia", "Wikidata"), answer.knowledgeProvenance?.sourceLabels)
+    }
+
     @Test fun safetyGateNeverReadsConfirmedKnowledge() {
         val store = object : SecureStore {
             override fun put(key: String, value: ByteArray) = Unit
