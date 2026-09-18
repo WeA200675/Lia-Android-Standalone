@@ -31,6 +31,7 @@ class MainActivity : Activity() {
         val cpu = CpuProfiles.detect()
         val cap = DeviceCapabilityProbe.read(this)
         val perf = ResourceGovernor(this).level()
+        val localRuntime = ModelRuntimeBootstrap(this).create()
         val webStore = WebModeStore(this)
         var webMode = webStore.get()
         val today = LocalDate.now()
