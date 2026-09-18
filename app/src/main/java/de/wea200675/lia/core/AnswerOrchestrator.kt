@@ -35,18 +35,23 @@ class AnswerOrchestrator(
         val style = router.classify(boundedText)
         val redacted = Anonymizer.redact(boundedText)
         val retainedResult = if (style == ConversationStyle.KNOWLEDGE) {
-            confirmedKnowledge?.let { repository ->
-                ConfirmedKnowledgeRepository.fingerprintCandidates(redacted)
-                    .asSequence()
-                    .mapNotNull(repository::find)
-                    .firstOrNull()
-                    ?.let { retained ->
-                        retained.summary to KnowledgeProvenance(
-                            sourceLabels = retained.sourceLabels,
-                            origin = KnowledgeOrigin.CONFIRMED_STORE,
-                            retrievedAtEpochMs = retained.lastUsedAtEpochMs
-                        )
-                    }
+            try {
+                confirmedKnowledge?.let { repository ->
+                    ConfirmedKnowledgeRepository.fingerprintCandidates(redacted)
+                        .asSequence()
+                        .mapNotNull(repository::find)
+                        .firstOrNull()
+                        ?.let { retained ->
+                            retained.summary to KnowledgeProvenance(
+                                sourceLabels = retained.sourceLabels,
+                                origin = KnowledgeOrigin.CONFIRMED_STORE,
+                                retrievedAtEpochMs = retained.lastUsedAtEpochMs
+                            )
+                        }
+                }
+            } catch (_: SecurityException) {
+                ConfirmedKnowledgeIntegrityRuntime.recordSecurityFailure()
+                null
             }
         } else null
         val webResult = retainedResult ?: if (style == ConversationStyle.KNOWLEDGE && webGateway != null) {
