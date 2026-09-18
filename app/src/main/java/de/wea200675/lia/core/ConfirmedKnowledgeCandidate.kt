@@ -10,6 +10,7 @@ data class ConfirmedKnowledgeCandidate(
         fun from(question: String, answer: OrchestratedAnswer): ConfirmedKnowledgeCandidate? {
             if (answer.source != AnswerSource.LOCAL_AI || !answer.webContextUsed) return null
             val provenance = answer.knowledgeProvenance ?: return null
+            if (provenance.origin == KnowledgeOrigin.CONFIRMED_STORE) return null
             val labels = provenance.sourceLabels.map(String::trim).filter(String::isNotEmpty).distinct().take(5)
             val summary = UntrustedKnowledgeBoundary.sanitize(answer.text) ?: return null
             if (question.isBlank() || labels.isEmpty()) return null
