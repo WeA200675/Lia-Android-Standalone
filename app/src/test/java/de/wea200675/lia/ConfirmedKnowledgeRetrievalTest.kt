@@ -50,7 +50,7 @@ class ConfirmedKnowledgeRetrievalTest {
 
     @Test fun modelFailureReturnsExactConfirmedSummaryWithSources() {
         val repository = ConfirmedKnowledgeRepository(MemoryStore())
-        val question = "Wie entsteht ein Regenbogen?"
+        val question = "Warum entsteht ein Regenbogen?"
         val summary = "Ein Regenbogen entsteht durch Brechung und Reflexion des Lichts in Wassertropfen."
         assertTrue(repository.saveConfirmed(
             summary,
