@@ -22,6 +22,13 @@ class AnswerOrchestrator(
         if (SafetyPolicy.requiresHumanHelp(boundedText)) {
             return OrchestratedAnswer(SafetyPolicy.responseForRisk(), AnswerSource.SAFETY)
         }
+        val coverage = LifeKnowledgeCoverage.assess(boundedText)
+        if (coverage.personalizedDecisionRisk) {
+            return OrchestratedAnswer(
+                LifeKnowledgeCoverage.guardedResponse(coverage.domain),
+                AnswerSource.SAFETY
+            )
+        }
 
         val style = router.classify(boundedText)
         val webContext = if (style == ConversationStyle.KNOWLEDGE && webGateway != null) {
