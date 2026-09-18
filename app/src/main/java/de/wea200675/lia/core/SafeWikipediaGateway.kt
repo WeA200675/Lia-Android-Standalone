@@ -14,28 +14,46 @@ import org.json.JSONObject
 class SafeWikipediaGateway(
     private val enabled: () -> Boolean,
     private val cache: BoundedKnowledgeCache = BoundedKnowledgeCache(),
-    private val sourceHealth: KnowledgeSourceHealthTracker = KnowledgeSourceHealthTracker()
-) : WebGateway {
-    override suspend fun query(anonymizedQuery: String): Result<String> = withContext(Dispatchers.IO) {
+    private val sourceHealth: KnowledgeSourceHealthTracker = KnowledgeSourceHealthTracker(),
+    private val clock: () -> Long = System::currentTimeMillis
+) : ProvenanceWebGateway {
+    override suspend fun queryWithProvenance(anonymizedQuery: String): Result<KnowledgeBundle> = withContext(Dispatchers.IO) {
         runCatching {
             check(enabled()) { "Internet knowledge is disabled" }
             val approved = requireNotNull(OutboundQueryPolicy.approved(anonymizedQuery)) {
                 "Query is not eligible for anonymous Internet lookup"
             }
-            cache.get(approved) ?: run {
+            val cached = cache.get(approved)
+            if (cached != null) {
+                KnowledgeBundle(
+                    text = cached,
+                    provenance = KnowledgeProvenance(
+                        sourceLabels = KnowledgeSourceLabels.fromRenderedContext(cached),
+                        origin = KnowledgeOrigin.SESSION_CACHE,
+                        retrievedAtEpochMs = clock()
+                    )
+                )
+            } else {
                 val results = KnowledgeSourceCatalog.select(approved)
                     .filter { sourceHealth.canAttempt(it.id) }
                     .mapNotNull { source ->
-                        runCatching { querySource(source, approved) }
+                        runCatching { source to querySource(source, approved) }
                             .onSuccess { sourceHealth.recordSuccess(source.id) }
                             .onFailure { sourceHealth.recordFailure(source.id) }
                             .getOrNull()
                     }
                     .take(MAX_RESULTS)
                 check(results.isNotEmpty()) { "No curated knowledge result" }
-                results.joinToString("\n\n").also {
-                    cache.put(approved, it, KnowledgeFreshnessPolicy.ttlMillis(approved))
-                }
+                val rendered = results.joinToString("\n\n") { it.second }
+                cache.put(approved, rendered, KnowledgeFreshnessPolicy.ttlMillis(approved))
+                KnowledgeBundle(
+                    text = rendered,
+                    provenance = KnowledgeProvenance(
+                        sourceLabels = results.map { it.first.label }.distinct(),
+                        origin = KnowledgeOrigin.LIVE,
+                        retrievedAtEpochMs = clock()
+                    )
+                )
             }
         }
     }
