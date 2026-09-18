@@ -27,6 +27,8 @@ class SupervisedLocalRuntime(
 
     override fun isReady(): Boolean = current.isReady()
 
+    fun isNativeReady(): Boolean = current.isNativeReady()
+
     fun state(): String = coordinator.state
 
     fun restartBudget(): Int = coordinator.restartBudget
