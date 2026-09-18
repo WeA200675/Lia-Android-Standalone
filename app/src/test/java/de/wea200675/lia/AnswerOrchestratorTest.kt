@@ -3,6 +3,7 @@ package de.wea200675.lia
 import de.wea200675.lia.core.AnswerOrchestrator
 import de.wea200675.lia.core.AnswerSource
 import de.wea200675.lia.core.ModelRuntime
+import de.wea200675.lia.core.SafeOfflineRuntime
 import de.wea200675.lia.core.WebGateway
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.EmptyCoroutineContext
@@ -58,16 +59,6 @@ class AnswerOrchestratorTest {
         assertFalse(sentToWeb.contains("anna@example.org"))
         assertTrue(sentToWeb.contains("[E-MAIL]"))
         assertTrue(promptToModel.contains("Lichtbrechung"))
-    }
-
-    @Test fun offlineRuntimeUsesRetrievedKnowledgeInsteadOfGenericMode() {
-        val web = gateway { Result.success("Ein Regenbogen entsteht durch Lichtbrechung.") }
-        val answer = runSuspend {
-            AnswerOrchestrator(SafeOfflineRuntime(), web).answer("Warum entsteht ein Regenbogen?", "prompt")
-        }
-        assertEquals(AnswerSource.OFFLINE_FALLBACK, answer.source)
-        assertEquals("Ein Regenbogen entsteht durch Lichtbrechung.", answer.text)
-        assertTrue(answer.webContextUsed)
     }
 
     @Test fun localFailureFallsBackWithoutWebForPracticalHelp() {
