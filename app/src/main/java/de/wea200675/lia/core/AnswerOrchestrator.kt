@@ -80,11 +80,20 @@ class AnswerOrchestrator(
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
 
-        if (localAnswer != null) {
+        if (localAnswer != null && localAnswer != SafeOfflineRuntime.RESPONSE) {
             return OrchestratedAnswer(
                 text = localAnswer,
                 source = AnswerSource.LOCAL_AI,
                 webContextUsed = webContext != null,
+                knowledgeProvenance = webResult?.second
+            )
+        }
+
+        if (webContext != null) {
+            return OrchestratedAnswer(
+                text = webContext,
+                source = if (retainedResult != null) AnswerSource.CONFIRMED_KNOWLEDGE else AnswerSource.OFFLINE_FALLBACK,
+                webContextUsed = true,
                 knowledgeProvenance = webResult?.second
             )
         }

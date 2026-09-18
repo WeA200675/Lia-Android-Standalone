@@ -3,6 +3,7 @@ package de.wea200675.lia
 import de.wea200675.lia.core.AnswerOrchestrator
 import de.wea200675.lia.core.AnswerSource
 import de.wea200675.lia.core.ModelRuntime
+import de.wea200675.lia.core.SafeOfflineRuntime
 import de.wea200675.lia.core.WebGateway
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.EmptyCoroutineContext
