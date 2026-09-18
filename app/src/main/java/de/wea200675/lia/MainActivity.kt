@@ -66,7 +66,7 @@ class MainActivity : Activity() {
         }
         val title = TextView(this).apply { text = "🌼 Lia"; textSize = 42f; gravity = Gravity.CENTER; setTextColor(Color.rgb(230, 120, 70)) }
         val status = TextView(this).apply {
-            text = "${if (localRuntime.isNativeReady()) "Lokale KI aktiv" else "Offline-Grundmodus aktiv"}\nCPU: ${cpu.logicalCores} logische Kerne\nRAM: ${(cap.ramMb / 1024)} GB · Speicher frei: ${(cap.freeInternalMb / 1024)} GB · Leistung: $perf"
+            text = "${if (localRuntime.isNativeReady()) "Lokale KI aktiv" else "Offline-Grundmodus aktiv"}\nCPU: ${cpu.logicalCores} logische Kerne\nRAM: ${(cap.ramMb / 1024)} GB · Speicher frei: ${(cap.freeInternalMb / 1024)} GB · Leistung: $perf\nWissenspuffer: ${cachePlan.profile} (${cachePlan.maxEntries} Einträge)"
             textSize = 18f; gravity = Gravity.CENTER
         }
         val chat = EditText(this).apply { hint = "Schreib mir etwas …"; textSize = 21f; minLines = 2; setPadding(16, 12, 16, 12) }
