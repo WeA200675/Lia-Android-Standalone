@@ -12,13 +12,16 @@ import de.wea200675.lia.core.EncryptedLearningProfile
 import de.wea200675.lia.core.RestartBudgetStore
 import de.wea200675.lia.core.KnowledgeCoverageReport
 import de.wea200675.lia.core.KnowledgeSessionRuntime
+import de.wea200675.lia.core.ConfirmedKnowledgeRepository
 
 class AdminActivity : Activity() {
     private lateinit var kiosk: KioskController
     private lateinit var profile: EncryptedLearningProfile
     override fun onCreate(state:Bundle?) {
         super.onCreate(state); kiosk=KioskController(this); profile=EncryptedLearningProfile(this)
-        val budgetStore = RestartBudgetStore(AndroidSecureStore(this))
+        val secureStore = AndroidSecureStore(this)
+        val budgetStore = RestartBudgetStore(secureStore)
+        val retainedKnowledge = ConfirmedKnowledgeRepository(secureStore)
         var adminUnlocked = false
         val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setPadding(32,32,32,32) }
         val title=TextView(this).apply { text="Lia Admin"; textSize=32f; gravity=Gravity.CENTER }
@@ -40,11 +43,20 @@ class AdminActivity : Activity() {
             text="Wissenspuffer und Quellenfehler zurücksetzen"
             textSize=16f
         }
+        val retainedStatus=TextView(this).apply { textSize=16f; setPadding(0,20,0,8) }
+        val retainedClear=Button(this).apply { text="Dauerhaftes bestätigtes Wissen löschen"; textSize=16f }
         val status=TextView(this).apply { textSize=18f; gravity=Gravity.CENTER }
         fun refresh(){
             review.text=profile.confirmed().joinToString("\n"){"✓ ${it.questionId}: ${it.answer}"}.ifBlank{"Keine bestätigten Lernpunkte."}
             budgetStatus.text="KI-Selbstheilung: maximal ${budgetStore.load()} Neustarts pro Lauf"
             val knowledge=KnowledgeSessionRuntime.snapshot()
+            val retained=retainedKnowledge.all()
+            retainedStatus.text=if(adminUnlocked) {
+                "Bestätigtes Wissen: ${retained.size} Einträge\n" +
+                    retained.take(10).joinToString("\n") { "• ${it.summary.take(140)} — ${it.sourceLabels.joinToString(", ")}" }
+            } else {
+                "Bestätigtes Wissen: ${retained.size} verschlüsselte Einträge. Inhalte erst nach PIN-Freigabe sichtbar."
+            }
             knowledgeStatus.text=KnowledgeCoverageReport.adminText() +
                 "\n\nLaufzeitstatus: ${knowledge.cachedEntries}/${knowledge.cacheCapacity} Wissenseinträge" +
                 "\nQuellen mit Fehlern: ${knowledge.sourcesWithFailures}" +
@@ -67,13 +79,19 @@ class AdminActivity : Activity() {
             budgetStore.save(RestartBudgetStore.DEFAULT)
             status.text="Restart-Budget auf den sicheren Standard 3 zurückgesetzt."; refresh()
         }
+        retainedClear.setOnClickListener {
+            if(!requireAdmin()) return@setOnClickListener
+            retainedKnowledge.clear()
+            status.text="Dauerhaftes bestätigtes Wissen vollständig gelöscht."
+            refresh()
+        }
         knowledgeReset.setOnClickListener {
             if(!requireAdmin()) return@setOnClickListener
             KnowledgeSessionRuntime.reset()
             status.text="Wissenspuffer geleert und Quellenfehler zurückgesetzt."
             refresh()
         }
-        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(knowledgeReset); box.addView(status)
+        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(knowledgeReset); box.addView(retainedStatus); box.addView(retainedClear); box.addView(status)
         val scroll=ScrollView(this).apply { addView(box) }
         setContentView(scroll); refresh()
     }
