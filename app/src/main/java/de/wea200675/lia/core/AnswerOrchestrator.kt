@@ -106,4 +106,22 @@ class AnswerOrchestrator(
             webContextUsed = webContext != null
         )
     }
+
+    /**
+     * Normalize recoverable adapter failures without turning cancellation into
+     * fallback work. Errors remain visible to the runtime instead of being hidden.
+     */
+    private suspend fun <T> recoverableCall(block: suspend () -> Result<T>): Result<T> {
+        val result = try {
+            block()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            Result.failure(failure)
+        }
+        val failure = result.exceptionOrNull()
+        if (failure is CancellationException) throw failure
+        return result
+    }
+
 }
