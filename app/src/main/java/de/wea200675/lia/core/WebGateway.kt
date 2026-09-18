@@ -1,5 +1,8 @@
 package de.wea200675.lia.core
 
+/** Gateway contract: only explicitly approved, redacted queries may leave the device. */
+interface WebGateway { suspend fun query(anonymizedQuery: String): Result<String> }
+
 /** Redacts common direct identifiers before any approved web request leaves the device. */
 object Anonymizer {
     private val email = Regex("""[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}""")
