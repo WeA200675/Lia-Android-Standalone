@@ -21,13 +21,14 @@ import de.wea200675.lia.core.AdminDestructiveActionGuard
 class AdminActivity : Activity() {
     private lateinit var kiosk: KioskController
     private lateinit var profile: EncryptedLearningProfile
+    private val session = AdminContentSession()
+    private var concealAdminContent: (() -> Unit)? = null
     override fun onCreate(state:Bundle?) {
         super.onCreate(state); kiosk=KioskController(this); profile=EncryptedLearningProfile(this)
         val secureStore = AndroidSecureStore(this)
         val budgetStore = RestartBudgetStore(secureStore)
         val retainedKnowledge = ConfirmedKnowledgeRepository(secureStore)
         val destructiveGuard = AdminDestructiveActionGuard()
-        var adminUnlocked = false
         val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setPadding(32,32,32,32) }
         val title=TextView(this).apply { text="Lia Admin"; textSize=32f; gravity=Gravity.CENTER }
         val pin=EditText(this).apply { hint="Admin-PIN"; inputType=InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD; textSize=22f }
@@ -52,11 +53,12 @@ class AdminActivity : Activity() {
         val retainedClear=Button(this).apply { text="Dauerhaftes bestätigtes Wissen löschen"; textSize=16f }
         val status=TextView(this).apply { textSize=18f; gravity=Gravity.CENTER }
         fun refresh(){
-            review.text=profile.confirmed().joinToString("\n"){"✓ ${it.questionId}: ${it.answer}"}.ifBlank{"Keine bestätigten Lernpunkte."}
+            review.text=session.read { profile.confirmed().joinToString("\n"){"✓ ${it.questionId}: ${it.answer}"}.ifBlank{"Keine bestätigten Lernpunkte."} }
+                ?: "Lernprofil: Inhalte erst nach PIN-Freigabe sichtbar."
             budgetStatus.text="KI-Selbstheilung: maximal ${budgetStore.load()} Neustarts pro Lauf"
             val knowledge=KnowledgeSessionRuntime.snapshot()
             val retained=try {
-                retainedKnowledge.all()
+                session.read { retainedKnowledge.all() } ?: emptyList()
             } catch (_: SecurityException) {
                 ConfirmedKnowledgeIntegrityRuntime.recordSecurityFailure()
                 emptyList()
@@ -67,24 +69,27 @@ class AdminActivity : Activity() {
             } else {
                 "✓ Verschlüsselte Wissensablage ohne erkannten Integritätsfehler.\n"
             }
-            retainedStatus.text=integrityText + if(adminUnlocked) {
+            retainedStatus.text=integrityText + if(session.isUnlocked) {
                 "Bestätigtes Wissen: ${retained.size} Einträge\n" +
                     retained.take(10).joinToString("\n") { "• ${it.summary.take(140)} — ${it.sourceLabels.joinToString(", ")}" }
             } else {
-                "Bestätigtes Wissen: ${retained.size} verschlüsselte Einträge. Inhalte erst nach PIN-Freigabe sichtbar."
+                "Bestätigtes Wissen: Inhalte erst nach PIN-Freigabe sichtbar."
             }
             knowledgeStatus.text=KnowledgeCoverageReport.adminText() +
                 "\n\nLaufzeitstatus: ${knowledge.cachedEntries}/${knowledge.cacheCapacity} Wissenseinträge" +
                 "\nQuellen mit Fehlern: ${knowledge.sourcesWithFailures}" +
                 "\nVorübergehend pausiert: ${knowledge.suspendedSources}"
         }
-        fun requireAdmin():Boolean { if (adminUnlocked) return true; status.text="Bitte zuerst mit der Admin-PIN freigeben."; return false }
+        fun requireAdmin():Boolean { if (session.isUnlocked) return true; status.text="Bitte zuerst mit der Admin-PIN freigeben."; return false }
         unlock.setOnClickListener {
-            adminUnlocked=kiosk.disableWithPin(pin.text.toString())
-            if(!adminUnlocked) destructiveGuard.cancel()
+            session.lock()
+            destructiveGuard.cancel()
+            refresh()
+            val verified = try { kiosk.disableWithPin(pin.text.toString()) } finally { pin.text.clear() }
+            if (verified) session.unlock()
             val remaining=kiosk.lockoutRemainingSeconds()
             status.text=when {
-                adminUnlocked -> "Admin-Modus geöffnet."
+                session.isUnlocked -> "Admin-Modus geöffnet."
                 remaining>0 -> "Zu viele Fehlversuche. Bitte in ${remaining} Sekunden erneut versuchen."
                 else -> "PIN nicht korrekt."
             }
@@ -132,7 +137,19 @@ class AdminActivity : Activity() {
             refresh()
         }
         box.addView(title); box.addView(pin); box.addView(unlock); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(knowledgeReset); box.addView(retainedStatus); box.addView(retainedClear); box.addView(status)
+        concealAdminContent = {
+            session.lock()
+            destructiveGuard.cancel()
+            pin.text.clear()
+            budgetInput.text.clear()
+            status.text = "Admin-Bereich gesperrt. Bitte erneut mit PIN freigeben."
+            refresh()
+        }
         val scroll=ScrollView(this).apply { addView(box) }
         setContentView(scroll); refresh()
+    }
+    override fun onPause() {
+        concealAdminContent?.invoke()
+        super.onPause()
     }
 }
