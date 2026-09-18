@@ -50,6 +50,8 @@ class BoundedKnowledgeCache(
     @Synchronized
     fun clear() = entries.clear()
 
+    fun capacity(): Int = maxEntries
+
     @Synchronized
     fun size(): Int {
         purgeExpired()

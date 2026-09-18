@@ -50,7 +50,8 @@ class MainActivity : Activity() {
             localRuntime,
             SafeWikipediaGateway(
                 enabled = { webMode != WebAccessMode.OFFLINE },
-                cache = BoundedKnowledgeCache(cachePlan.maxEntries)
+                cache = KnowledgeSessionRuntime.configureCache(cachePlan.maxEntries),
+                sourceHealth = KnowledgeSessionRuntime.sourceHealth
             )
         )
         val today = LocalDate.now()

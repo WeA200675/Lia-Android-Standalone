@@ -11,6 +11,7 @@ import de.wea200675.lia.core.AndroidSecureStore
 import de.wea200675.lia.core.EncryptedLearningProfile
 import de.wea200675.lia.core.RestartBudgetStore
 import de.wea200675.lia.core.KnowledgeCoverageReport
+import de.wea200675.lia.core.KnowledgeSessionRuntime
 
 class AdminActivity : Activity() {
     private lateinit var kiosk: KioskController
@@ -32,14 +33,22 @@ class AdminActivity : Activity() {
         val budgetApply=Button(this).apply { text="Restart-Budget speichern"; textSize=18f }
         val budgetReset=Button(this).apply { text="Restart-Budget zurücksetzen"; textSize=18f }
         val knowledgeStatus=TextView(this).apply {
-            text=KnowledgeCoverageReport.adminText()
             textSize=16f
             setPadding(0,24,0,16)
+        }
+        val knowledgeReset=Button(this).apply {
+            text="Wissenspuffer und Quellenfehler zurücksetzen"
+            textSize=16f
         }
         val status=TextView(this).apply { textSize=18f; gravity=Gravity.CENTER }
         fun refresh(){
             review.text=profile.confirmed().joinToString("\n"){"✓ ${it.questionId}: ${it.answer}"}.ifBlank{"Keine bestätigten Lernpunkte."}
             budgetStatus.text="KI-Selbstheilung: maximal ${budgetStore.load()} Neustarts pro Lauf"
+            val knowledge=KnowledgeSessionRuntime.snapshot()
+            knowledgeStatus.text=KnowledgeCoverageReport.adminText() +
+                "\n\nLaufzeitstatus: ${knowledge.cachedEntries}/${knowledge.cacheCapacity} Wissenseinträge" +
+                "\nQuellen mit Fehlern: ${knowledge.sourcesWithFailures}" +
+                "\nVorübergehend pausiert: ${knowledge.suspendedSources}"
         }
         fun requireAdmin():Boolean { if (adminUnlocked) return true; status.text="Bitte zuerst mit der Admin-PIN freigeben."; return false }
         unlock.setOnClickListener { adminUnlocked=kiosk.disableWithPin(pin.text.toString()); status.text=if(adminUnlocked) "Admin-Modus geöffnet." else "PIN nicht korrekt." }
@@ -58,7 +67,13 @@ class AdminActivity : Activity() {
             budgetStore.save(RestartBudgetStore.DEFAULT)
             status.text="Restart-Budget auf den sicheren Standard 3 zurückgesetzt."; refresh()
         }
-        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(status)
+        knowledgeReset.setOnClickListener {
+            if(!requireAdmin()) return@setOnClickListener
+            KnowledgeSessionRuntime.reset()
+            status.text="Wissenspuffer geleert und Quellenfehler zurückgesetzt."
+            refresh()
+        }
+        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(knowledgeReset); box.addView(status)
         val scroll=ScrollView(this).apply { addView(box) }
         setContentView(scroll); refresh()
     }
