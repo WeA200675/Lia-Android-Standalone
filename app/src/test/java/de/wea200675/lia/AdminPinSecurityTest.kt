@@ -45,7 +45,7 @@ class AdminPinSecurityTest {
     }
 
     @Test fun malformedVerifierFailsClosed() {
-        assertFalse(AdminPinVerifier.verify("123456", "v1$999999999$bad$bad"))
+        assertFalse(AdminPinVerifier.verify("123456", "v1\\$999999999\\$bad\\$bad"))
         assertFalse(AdminPinVerifier.verify("123456", "not-a-verifier"))
     }
 }
