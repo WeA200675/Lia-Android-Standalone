@@ -10,7 +10,7 @@ data class OrchestratedAnswer(
 
 /**
  * Central answer pipeline. Safety is evaluated first. Web knowledge is optional,
- * anonymized before hand-off, and can only enrich the local model prompt.
+ * anonymized before hand-off, and treated only as untrusted reference data.
  */
 class AnswerOrchestrator(
     private val runtime: ModelRuntime,
@@ -27,9 +27,7 @@ class AnswerOrchestrator(
         val webContext = if (style == ConversationStyle.KNOWLEDGE && webGateway != null) {
             webGateway.query(Anonymizer.redact(boundedText))
                 .getOrNull()
-                ?.trim()
-                ?.takeIf { it.isNotEmpty() }
-                ?.take(4000)
+                ?.let(UntrustedKnowledgeBoundary::sanitize)
         } else {
             null
         }
@@ -37,7 +35,7 @@ class AnswerOrchestrator(
         val enrichedPrompt = if (webContext == null) {
             prompt
         } else {
-            "$prompt\n\nZusatzwissen aus der freigegebenen Web-/Offline-Kaskade:\n$webContext"
+            "$prompt\n\n${UntrustedKnowledgeBoundary.asReferenceBlock(webContext)}"
         }
 
         val localAnswer = runtime.generate(enrichedPrompt)
