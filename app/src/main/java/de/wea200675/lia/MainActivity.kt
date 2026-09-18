@@ -47,17 +47,18 @@ class MainActivity : Activity() {
             ramMb = cap.ramMb.toLong(),
             sourceCount = KnowledgeSourceCatalog.sources.size
         )
+        val secureStore = AndroidSecureStore(this)
+        confirmedKnowledge = ConfirmedKnowledgeRepository(secureStore)
         answerOrchestrator = AnswerOrchestrator(
             localRuntime,
             SafeWikipediaGateway(
                 enabled = { webMode != WebAccessMode.OFFLINE },
                 cache = KnowledgeSessionRuntime.configureCache(cachePlan.maxEntries),
                 sourceHealth = KnowledgeSessionRuntime.sourceHealth
-            )
+            ),
+            confirmedKnowledge = confirmedKnowledge
         )
         val today = LocalDate.now()
-        val secureStore = AndroidSecureStore(this)
-        confirmedKnowledge = ConfirmedKnowledgeRepository(secureStore)
         val dailyPlan = DailyPlanRepository(TrainingCache(secureStore)).forDate(today)
         val promptProgress = DailyPromptProgress(secureStore)
         index = promptProgress.nextIndex(today, dailyPlan.prompts.size)
@@ -104,10 +105,10 @@ class MainActivity : Activity() {
         fun presentAnswer(questionText: String, result: OrchestratedAnswer) {
             val provenance = result.knowledgeProvenance
             val sourceNote = if (provenance == null) "" else {
-                val origin = if (provenance.origin == KnowledgeOrigin.LIVE) {
-                    "frisch abgerufen"
-                } else {
-                    "aus dem flüchtigen Wissenspuffer"
+                val origin = when (provenance.origin) {
+                    KnowledgeOrigin.LIVE -> "frisch abgerufen"
+                    KnowledgeOrigin.SESSION_CACHE -> "aus dem flüchtigen Wissenspuffer"
+                    KnowledgeOrigin.CONFIRMED_STORE -> "aus dem bestätigten lokalen Wissen"
                 }
                 "\n\nℹ Quellen: ${provenance.sourceLabels.joinToString(", ")} · $origin"
             }

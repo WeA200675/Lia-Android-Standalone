@@ -1,6 +1,6 @@
 package de.wea200675.lia.core
 
-enum class KnowledgeOrigin { LIVE, SESSION_CACHE }
+enum class KnowledgeOrigin { LIVE, SESSION_CACHE, CONFIRMED_STORE }
 
 data class KnowledgeProvenance(
     val sourceLabels: List<String>,
