@@ -88,9 +88,13 @@ class SafeWikipediaGateway(
                 check(output.size() <= MAX_RESPONSE_BYTES) { "Knowledge response too large" }
                 output.toByteArray()
             }
-            val pages = JSONObject(String(bytes, Charsets.UTF_8)).optJSONObject("query")?.optJSONObject("pages")
+            val pages = JSONObject(String(bytes, Charsets.UTF_8))
+                .optJSONObject("query")
+                ?.optJSONObject("pages")
                 ?: error("No result")
-            val first = pages.keys().asSequence().map { pages.getJSONObject(it) }.firstOrNull()
+            val first = pages.keys().asSequence()
+                .map { pages.getJSONObject(it) }
+                .firstOrNull()
                 ?: error("No result")
             val title = first.optString("title").trim().take(160)
             val snippet = first.optString("extract").trim().take(MAX_SNIPPET_CHARS)

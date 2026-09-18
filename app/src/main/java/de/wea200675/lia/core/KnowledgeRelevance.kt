@@ -12,7 +12,8 @@ object KnowledgeRelevance {
     fun accepts(question: String, answer: String): Boolean {
         val questionTerms = terms(question)
         if (questionTerms.isEmpty()) return true
-        val answerTerms = terms(answer)
+        val answerContent = if (answer.startsWith("[") && answer.contains("] ")) answer.substringAfter("] ") else answer
+        val answerTerms = terms(answerContent)
         return questionTerms.any { term ->
             answerTerms.any { candidate ->
                 candidate == term || candidate.startsWith(term) || term.startsWith(candidate)

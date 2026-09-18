@@ -25,4 +25,10 @@ class KnowledgeRelevanceTest {
             "Johann Wolfgang von Goethe war ein deutscher Dichter."
         ))
     }
+    @Test fun sourceLabelAloneDoesNotMakeUnrelatedContentRelevant() {
+        assertFalse(KnowledgeRelevance.accepts(
+            "Was ist Wikipedia?",
+            "[Wikipedia] Bienen können Gesichter anhand von Mustern unterscheiden."
+        ))
+    }
 }
