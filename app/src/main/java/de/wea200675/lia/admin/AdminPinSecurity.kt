@@ -43,17 +43,26 @@ object AdminPinVerifier {
         return listOf(PREFIX, ITERATIONS.toString(), b64(salt), b64(hash)).joinToString("$")
     }
 
-    fun verify(pin: String, verifier: String): Boolean = try {
-        if (!isValidPin(pin)) return false
-        val parts = verifier.split('$')
-        if (parts.size != 4 || parts[0] != PREFIX) return false
-        val iterations = parts[1].toInt()
-        if (iterations !in 100_000..500_000) return false
-        val salt = Base64.getDecoder().decode(parts[2])
-        val expected = Base64.getDecoder().decode(parts[3])
-        if (salt.size != SALT_BYTES || expected.size != KEY_BITS / 8) return false
-        MessageDigest.isEqual(expected, derive(pin, salt, iterations))
-    } catch (_: Exception) { false }
+    fun verify(pin: String, verifier: String): Boolean {
+        return try {
+            if (!isValidPin(pin)) {
+                false
+            } else {
+                val parts = verifier.split('$')
+                val iterations = parts.getOrNull(1)?.toIntOrNull()
+                if (parts.size != 4 || parts[0] != PREFIX || iterations == null || iterations !in 100_000..500_000) {
+                    false
+                } else {
+                    val salt = Base64.getDecoder().decode(parts[2])
+                    val expected = Base64.getDecoder().decode(parts[3])
+                    salt.size == SALT_BYTES && expected.size == KEY_BITS / 8 &&
+                        MessageDigest.isEqual(expected, derive(pin, salt, iterations))
+                }
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
 
     fun requireValidPin(pin: String) {
         require(isValidPin(pin)) { "Admin PIN must contain 6 to 12 digits" }
