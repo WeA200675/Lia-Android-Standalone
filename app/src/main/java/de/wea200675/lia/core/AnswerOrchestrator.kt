@@ -16,7 +16,8 @@ data class OrchestratedAnswer(
 class AnswerOrchestrator(
     private val runtime: ModelRuntime,
     private val webGateway: WebGateway? = null,
-    private val router: ConversationRouter = ConversationRouter()
+    private val router: ConversationRouter = ConversationRouter(),
+    private val confirmedKnowledge: ConfirmedKnowledgeRepository? = null
 ) {
     suspend fun answer(userText: String, prompt: String): OrchestratedAnswer {
         val boundedText = userText.trim().take(2000)
@@ -32,8 +33,17 @@ class AnswerOrchestrator(
         }
 
         val style = router.classify(boundedText)
-        val webResult = if (style == ConversationStyle.KNOWLEDGE && webGateway != null) {
-            val redacted = Anonymizer.redact(boundedText)
+        val redacted = Anonymizer.redact(boundedText)
+        val retainedResult = if (style == ConversationStyle.KNOWLEDGE) {
+            confirmedKnowledge?.find(ConfirmedKnowledgeRepository.fingerprint(redacted))?.let { retained ->
+                retained.summary to KnowledgeProvenance(
+                    sourceLabels = retained.sourceLabels,
+                    origin = KnowledgeOrigin.CONFIRMED_STORE,
+                    retrievedAtEpochMs = retained.lastUsedAtEpochMs
+                )
+            }
+        } else null
+        val webResult = retainedResult ?: if (style == ConversationStyle.KNOWLEDGE && webGateway != null) {
             if (webGateway is ProvenanceWebGateway) {
                 webGateway.queryWithProvenance(redacted).getOrNull()?.let { bundle ->
                     UntrustedKnowledgeBoundary.sanitize(bundle.text)?.let {
@@ -45,9 +55,7 @@ class AnswerOrchestrator(
                     ?.let(UntrustedKnowledgeBoundary::sanitize)
                     ?.let { it to null }
             }
-        } else {
-            null
-        }
+        } else null
         val webContext = webResult?.first
 
         val enrichedPrompt = if (webContext == null) {
