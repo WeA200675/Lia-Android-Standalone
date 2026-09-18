@@ -32,10 +32,10 @@ class RuntimeCoordinator(
     }
 
     fun recordFailure() {
-        val failures = 3 - restartBudget + 1
-        lastRecovery = healing.decide(failures - 1)
+        val failureCount = 3 - restartBudget + 1
+        lastRecovery = healing.decide(failureCount)
         restartBudget--
-        state = if (restartBudget <= 0) "BLOCKED" else "BACKOFF"
+        state = if (restartBudget <= 0 || !lastRecovery.restartAllowed) "BLOCKED" else "BACKOFF"
     }
 
     fun resetBudget() {
