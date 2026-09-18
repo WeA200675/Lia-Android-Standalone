@@ -79,7 +79,17 @@ class AdminActivity : Activity() {
                 "\nVorübergehend pausiert: ${knowledge.suspendedSources}"
         }
         fun requireAdmin():Boolean { if (adminUnlocked) return true; status.text="Bitte zuerst mit der Admin-PIN freigeben."; return false }
-        unlock.setOnClickListener { adminUnlocked=kiosk.disableWithPin(pin.text.toString()); if(!adminUnlocked) destructiveGuard.cancel(); status.text=if(adminUnlocked) "Admin-Modus geöffnet." else "PIN nicht korrekt."; refresh() }
+        unlock.setOnClickListener {
+            adminUnlocked=kiosk.disableWithPin(pin.text.toString())
+            if(!adminUnlocked) destructiveGuard.cancel()
+            val remaining=kiosk.lockoutRemainingSeconds()
+            status.text=when {
+                adminUnlocked -> "Admin-Modus geöffnet."
+                remaining>0 -> "Zu viele Fehlversuche. Bitte in ${remaining} Sekunden erneut versuchen."
+                else -> "PIN nicht korrekt."
+            }
+            refresh()
+        }
         wifi.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }
         confirm.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; profile.confirmAll(); status.text="Alle Lernpunkte bestätigt."; refresh() }
         clear.setOnClickListener {
