@@ -18,7 +18,7 @@ class ConfirmedKnowledgeRepository(
     init { require(maxEntries in 1..512); require(maxBytes in 4096..2 * 1024 * 1024) }
 
     fun saveConfirmed(sourceBoundSummary: String, sourceLabels: List<String>, questionFingerprint: String, ttlMs: Long = DEFAULT_TTL_MS): Boolean {
-        val summary = UntrustedKnowledgeBoundary.sanitize(sourceBoundSummary) ?: return false
+        val summary = (UntrustedKnowledgeBoundary.sanitize(sourceBoundSummary) ?: return false)\n            .replace(Regex("""^\\[[^]]{1,120}]\\s*"""), "")\n            .trim()\n        if (summary.length < 3) return false
         val labels = sourceLabels.map { it.trim() }.filter { it.isNotEmpty() }.distinct().take(5)
         if (labels.isEmpty() || !questionFingerprint.matches(HEX) || ttlMs !in MIN_TTL_MS..MAX_TTL_MS) return false
         val now = clock(); val current = loadInternal(now).toMutableList()
