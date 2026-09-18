@@ -86,8 +86,8 @@ class ConfirmedKnowledgeRepository(
         internal fun canonicalize(question: String): String = Normalizer
             .normalize(question, Normalizer.Form.NFC)
             .lowercase(Locale.ROOT)
-            .replace(Regex("""[\\p{P}\\p{S}]+"""), " ")
-            .replace(Regex("""\\s+"""), " ")
+            .replace(Regex("""[\p{P}\p{S}]+"""), " ")
+            .replace(Regex("""\s+"""), " ")
             .trim()
 
         private fun hash(value: String): String = MessageDigest.getInstance("SHA-256")
