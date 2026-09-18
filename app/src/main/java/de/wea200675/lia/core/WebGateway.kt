@@ -7,7 +7,7 @@ interface WebGateway { suspend fun query(anonymizedQuery: String): Result<String
 object Anonymizer {
     private val email = Regex("""[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}""")
     private val iban = Regex("""\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]){11,30}\b""")
-    private val phone = Regex("""(?<![A-Za-z])\+?[0-9][0-9 ()/.-]{6,}[0-9](?![A-Za-z])""")
+    private val phone = Regex("""\+?\d(?:[\s()/.-]*\d){7,14}""")
     private val date = Regex("""\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b""")
     private val postalCode = Regex("""\b\d{5}\b""")
 
