@@ -9,8 +9,8 @@ import org.junit.Test
 
 class RuntimeCoordinatorTest {
     private fun coordinator() = RuntimeCoordinator(
-        ModelSpec("primary", "primary.gguf", "x", 4096),
-        ModelSpec("recovery", "recovery.gguf", "y", 2048),
+        ModelSpec("primary", "primary.gguf", "0".repeat(64), 4096),
+        ModelSpec("recovery", "recovery.gguf", "1".repeat(64), 2048),
         physicalCores = 4,
         logicalThreads = 8
     )
