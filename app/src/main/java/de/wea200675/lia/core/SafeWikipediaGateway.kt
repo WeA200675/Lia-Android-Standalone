@@ -13,7 +13,8 @@ import org.json.JSONObject
  */
 class SafeWikipediaGateway(
     private val enabled: () -> Boolean,
-    private val cache: BoundedKnowledgeCache = BoundedKnowledgeCache()
+    private val cache: BoundedKnowledgeCache = BoundedKnowledgeCache(),
+    private val sourceHealth: KnowledgeSourceHealthTracker = KnowledgeSourceHealthTracker()
 ) : WebGateway {
     override suspend fun query(anonymizedQuery: String): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
@@ -23,7 +24,13 @@ class SafeWikipediaGateway(
             }
             cache.get(approved) ?: run {
                 val results = KnowledgeSourceCatalog.select(approved)
-                    .mapNotNull { source -> runCatching { querySource(source, approved) }.getOrNull() }
+                    .filter { sourceHealth.canAttempt(it.id) }
+                    .mapNotNull { source ->
+                        runCatching { querySource(source, approved) }
+                            .onSuccess { sourceHealth.recordSuccess(source.id) }
+                            .onFailure { sourceHealth.recordFailure(source.id) }
+                            .getOrNull()
+                    }
                     .take(MAX_RESULTS)
                 check(results.isNotEmpty()) { "No curated knowledge result" }
                 results.joinToString("\n\n").also {
