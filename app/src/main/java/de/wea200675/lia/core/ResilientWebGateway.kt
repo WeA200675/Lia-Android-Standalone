@@ -13,8 +13,9 @@ object OfflineWebFallback : WebGateway {
 }
 
 /**
- * Keeps web failures local. A failure never triggers a retry with different data
- * and never bypasses the existing WebPolicy/Anonymizer gates.
+ * A bounded two-level cascade: primary gateway, then one local fallback.
+ * The fallback is never called more than once and cannot trigger a new web request
+ * unless the caller explicitly supplied such a gateway.
  */
 class ResilientWebGateway(
     private val primary: WebGateway,
@@ -24,7 +25,9 @@ class ResilientWebGateway(
         val primaryResult = primary.query(anonymizedQuery)
         if (primaryResult.isSuccess) return primaryResult
 
-        val fallbackResult = fallback.query(anonymizedQuery)
-        return Result.success(fallbackResult.getOrElse { OFFLINE_MESSAGE })
+        return fallback.query(anonymizedQuery).fold(
+            onSuccess = { Result.success(it) },
+            onFailure = { Result.success(OFFLINE_MESSAGE) }
+        )
     }
 }
