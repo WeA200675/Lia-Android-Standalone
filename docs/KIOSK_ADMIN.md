@@ -23,3 +23,18 @@ Tablet-Abnahme: Ein persönliches Lernprofil anlegen, Admin ohne PIN öffnen und
 prüfen, dass keine Antworten sichtbar sind. Nach Freigabe zu WLAN wechseln und
 zurückkehren: Inhalte müssen erneut gesperrt sein. Eine angefangene Löschbestätigung
 darf den Wechsel nicht überleben. Auch Bildschirm-Aus/Ein und App-Wechsel prüfen.
+
+## Befristete Freigabe
+
+Eine erfolgreiche PIN-Prüfung gibt den Admin-Bereich für höchstens fünf Minuten
+frei. Lesen, Scrollen und weitere Aktionen verlängern diese Frist nicht.
+Die Frist nutzt die monotone Android-Uhr; Änderungen der Kalenderzeit verlängern
+die Freigabe nicht. Jede geschützte Aktion prüft den Ablauf zusätzlich, auch wenn
+der UI-Timer verzögert ausgeführt wird. „Jetzt sperren“ beendet die Freigabe sofort.
+Beide Wege verdecken Inhalte, leeren Eingaben und verwerfen Löschbestätigungen.
+Dies sperrt den Lia-Admin-Bereich, nicht die Android-Einstellungen oder das Gerät.
+
+Tablet-Abnahme: Nach PIN-Freigabe den Admin-Bildschirm fünf Minuten offen lassen:
+Inhalte müssen automatisch verschwinden. Danach darf keine Verwaltungsaktion
+ohne erneute PIN funktionieren. Auch „Jetzt sperren“ nach dem ersten Löschdruck
+testen; erneute Freigabe darf die alte Löschbestätigung nicht wiederherstellen.

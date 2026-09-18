@@ -1,13 +1,27 @@
 package de.wea200675.lia.admin
 
-/** An activity-local authorization gate. Never persist or restore an unlocked session. */
-class AdminContentSession {
-    var isUnlocked: Boolean = false
-        private set
+/** Activity-local authorization with a fixed lifetime; reads never extend it. */
+class AdminContentSession(
+    private val nowMillis: () -> Long = { System.nanoTime() / 1_000_000L },
+    private val lifetimeMillis: Long = 5 * 60_000L
+) {
+    init { require(lifetimeMillis > 0) }
+    private var unlockedAt: Long? = null
 
-    fun unlock() { isUnlocked = true }
-    fun lock() { isUnlocked = false }
+    val isUnlocked: Boolean
+        get() {
+            val start = unlockedAt ?: return false
+            val elapsed = nowMillis() - start
+            if (elapsed < 0 || elapsed >= lifetimeMillis) {
+                lock()
+                return false
+            }
+            return true
+        }
 
-    /** Do not even read/decrypt personal content while the admin session is locked. */
+    fun unlock() { unlockedAt = nowMillis() }
+    fun lock() { unlockedAt = null }
+
+    /** Do not even read/decrypt personal content while locked or expired. */
     fun <T> read(loader: () -> T): T? = if (isUnlocked) loader() else null
 }
