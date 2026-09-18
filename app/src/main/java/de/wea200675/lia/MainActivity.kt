@@ -42,9 +42,16 @@ class MainActivity : Activity() {
         localRuntime = ModelRuntimeBootstrap(this).createSupervised()
         val webStore = WebModeStore(this)
         var webMode = webStore.get()
+        val cachePlan = KnowledgeCacheCapacity.recommend(
+            ramMb = cap.ramMb,
+            sourceCount = KnowledgeSourceCatalog.sources.size
+        )
         answerOrchestrator = AnswerOrchestrator(
             localRuntime,
-            SafeWikipediaGateway { webMode != WebAccessMode.OFFLINE }
+            SafeWikipediaGateway(
+                enabled = { webMode != WebAccessMode.OFFLINE },
+                cache = BoundedKnowledgeCache(cachePlan.maxEntries)
+            )
         )
         val today = LocalDate.now()
         val secureStore = AndroidSecureStore(this)
