@@ -30,6 +30,8 @@ class ResilientLocalRuntime(
 
     override fun isReady(): Boolean = nativeReady || fallback.isReady()
 
+    fun isNativeReady(): Boolean = nativeReady
+
     fun close() {
         native.close()
         nativeReady = false
