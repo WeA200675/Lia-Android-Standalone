@@ -35,12 +35,18 @@ class AnswerOrchestrator(
         val style = router.classify(boundedText)
         val redacted = Anonymizer.redact(boundedText)
         val retainedResult = if (style == ConversationStyle.KNOWLEDGE) {
-            confirmedKnowledge?.find(ConfirmedKnowledgeRepository.fingerprint(redacted))?.let { retained ->
-                retained.summary to KnowledgeProvenance(
-                    sourceLabels = retained.sourceLabels,
-                    origin = KnowledgeOrigin.CONFIRMED_STORE,
-                    retrievedAtEpochMs = retained.lastUsedAtEpochMs
-                )
+            confirmedKnowledge?.let { repository ->
+                ConfirmedKnowledgeRepository.fingerprintCandidates(redacted)
+                    .asSequence()
+                    .mapNotNull(repository::find)
+                    .firstOrNull()
+                    ?.let { retained ->
+                        retained.summary to KnowledgeProvenance(
+                            sourceLabels = retained.sourceLabels,
+                            origin = KnowledgeOrigin.CONFIRMED_STORE,
+                            retrievedAtEpochMs = retained.lastUsedAtEpochMs
+                        )
+                    }
             }
         } else null
         val webResult = retainedResult ?: if (style == ConversationStyle.KNOWLEDGE && webGateway != null) {

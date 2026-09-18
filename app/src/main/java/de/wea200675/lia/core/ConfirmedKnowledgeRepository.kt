@@ -2,7 +2,9 @@ package de.wea200675.lia.core
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.text.Normalizer
 import java.util.Base64
+import java.util.Locale
 
 /** Explicitly confirmed, source-bound knowledge; never stores raw questions. */
 data class ConfirmedKnowledge(
@@ -75,7 +77,21 @@ class ConfirmedKnowledgeRepository(
         const val DEFAULT_TTL_MS = 180L * 24 * 60 * 60 * 1000
         const val MIN_TTL_MS = 60 * 60 * 1000L
         const val MAX_TTL_MS = 365L * 24 * 60 * 60 * 1000
-        fun fingerprint(anonymizedQuestion: String): String = MessageDigest.getInstance("SHA-256")
-            .digest(anonymizedQuestion.trim().toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
+        fun fingerprint(anonymizedQuestion: String): String = hash(canonicalize(anonymizedQuestion))
+
+        /** New canonical key first, followed by the legacy exact key for existing installations. */
+        fun fingerprintCandidates(anonymizedQuestion: String): List<String> =
+            listOf(fingerprint(anonymizedQuestion), hash(anonymizedQuestion.trim())).distinct()
+
+        internal fun canonicalize(question: String): String = Normalizer
+            .normalize(question, Normalizer.Form.NFC)
+            .lowercase(Locale.ROOT)
+            .replace(Regex("""[\p{P}\p{S}]+"""), " ")
+            .replace(Regex("""\s+"""), " ")
+            .trim()
+
+        private fun hash(value: String): String = MessageDigest.getInstance("SHA-256")
+            .digest(value.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
     }
 }
