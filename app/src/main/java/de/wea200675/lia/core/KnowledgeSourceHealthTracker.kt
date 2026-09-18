@@ -44,5 +44,11 @@ class KnowledgeSourceHealthTracker(
     fun status(sourceId: String): SourceHealth = health[sourceId] ?: SourceHealth(0, 0)
 
     @Synchronized
+    fun suspendedCount(): Int = health.keys.count { !canAttempt(it) }
+
+    @Synchronized
+    fun sourcesWithFailures(): Int = health.count { it.value.consecutiveFailures > 0 }
+
+    @Synchronized
     fun reset() = health.clear()
 }
