@@ -8,6 +8,9 @@ class LocalRuntimeFactory(
     private val nativeFactory: () -> NativeInference = { JniNativeInference(SystemJniInferenceBridge()) },
     private val fallback: ModelRuntime = SafeOfflineRuntime()
 ) {
+    fun create(manifest: ModelManifest): ResilientLocalRuntime =
+        create(manifest.primary, manifest.recovery)
+
     fun create(primary: ModelSpec, recovery: ModelSpec): ResilientLocalRuntime {
         val runtime = ResilientLocalRuntime(nativeFactory(), fallback)
         val candidate = listOf(primary, recovery).firstOrNull { spec ->
