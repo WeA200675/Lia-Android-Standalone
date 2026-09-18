@@ -15,6 +15,8 @@ import de.wea200675.lia.core.KnowledgeSessionRuntime
 import de.wea200675.lia.core.ConfirmedKnowledgeRepository
 import de.wea200675.lia.core.ConfirmedKnowledgeIntegrityRuntime
 import de.wea200675.lia.core.KnowledgeIntegrityState
+import de.wea200675.lia.core.AdminDestructiveAction
+import de.wea200675.lia.core.AdminDestructiveActionGuard
 
 class AdminActivity : Activity() {
     private lateinit var kiosk: KioskController
@@ -24,6 +26,7 @@ class AdminActivity : Activity() {
         val secureStore = AndroidSecureStore(this)
         val budgetStore = RestartBudgetStore(secureStore)
         val retainedKnowledge = ConfirmedKnowledgeRepository(secureStore)
+        val destructiveGuard = AdminDestructiveActionGuard()
         var adminUnlocked = false
         val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setPadding(32,32,32,32) }
         val title=TextView(this).apply { text="Lia Admin"; textSize=32f; gravity=Gravity.CENTER }
@@ -76,10 +79,19 @@ class AdminActivity : Activity() {
                 "\nVorübergehend pausiert: ${knowledge.suspendedSources}"
         }
         fun requireAdmin():Boolean { if (adminUnlocked) return true; status.text="Bitte zuerst mit der Admin-PIN freigeben."; return false }
-        unlock.setOnClickListener { adminUnlocked=kiosk.disableWithPin(pin.text.toString()); status.text=if(adminUnlocked) "Admin-Modus geöffnet." else "PIN nicht korrekt."; refresh() }
+        unlock.setOnClickListener { adminUnlocked=kiosk.disableWithPin(pin.text.toString()); if(!adminUnlocked) destructiveGuard.cancel(); status.text=if(adminUnlocked) "Admin-Modus geöffnet." else "PIN nicht korrekt."; refresh() }
         wifi.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }
         confirm.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; profile.confirmAll(); status.text="Alle Lernpunkte bestätigt."; refresh() }
-        clear.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; profile.deleteAll(); status.text="Lernprofil gelöscht."; refresh() }
+        clear.setOnClickListener {
+            if(!requireAdmin()) return@setOnClickListener
+            if(!destructiveGuard.confirm(AdminDestructiveAction.DELETE_LEARNING_PROFILE)) {
+                status.text="Lernprofil wirklich löschen? Bitte dieselbe Taste innerhalb von 30 Sekunden erneut drücken."
+                return@setOnClickListener
+            }
+            profile.deleteAll()
+            status.text="Lernprofil gelöscht."
+            refresh()
+        }
         budgetApply.setOnClickListener {
             if(!requireAdmin()) return@setOnClickListener
             val requested=budgetInput.text.toString().toIntOrNull()
@@ -94,6 +106,10 @@ class AdminActivity : Activity() {
         }
         retainedClear.setOnClickListener {
             if(!requireAdmin()) return@setOnClickListener
+            if(!destructiveGuard.confirm(AdminDestructiveAction.DELETE_CONFIRMED_KNOWLEDGE)) {
+                status.text="Bestätigtes Wissen wirklich löschen? Bitte dieselbe Taste innerhalb von 30 Sekunden erneut drücken."
+                return@setOnClickListener
+            }
             retainedKnowledge.clear()
             ConfirmedKnowledgeIntegrityRuntime.resetAfterDeletion()
             status.text="Dauerhaftes bestätigtes Wissen vollständig gelöscht; Integritätsalarm zurückgesetzt."
