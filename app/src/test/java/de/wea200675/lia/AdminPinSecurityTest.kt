@@ -45,7 +45,8 @@ class AdminPinSecurityTest {
     }
 
     @Test fun malformedVerifierFailsClosed() {
-        assertFalse(AdminPinVerifier.verify("123456", "v1\\$999999999\\$bad\\$bad"))
+        val malformed = listOf("v1", "999999999", "bad", "bad").joinToString("$")
+        assertFalse(AdminPinVerifier.verify("123456", malformed))
         assertFalse(AdminPinVerifier.verify("123456", "not-a-verifier"))
     }
 }
