@@ -13,6 +13,8 @@ import de.wea200675.lia.core.RestartBudgetStore
 import de.wea200675.lia.core.KnowledgeCoverageReport
 import de.wea200675.lia.core.KnowledgeSessionRuntime
 import de.wea200675.lia.core.ConfirmedKnowledgeRepository
+import de.wea200675.lia.core.ConfirmedKnowledgeIntegrityRuntime
+import de.wea200675.lia.core.KnowledgeIntegrityState
 
 class AdminActivity : Activity() {
     private lateinit var kiosk: KioskController
@@ -50,8 +52,19 @@ class AdminActivity : Activity() {
             review.text=profile.confirmed().joinToString("\n"){"✓ ${it.questionId}: ${it.answer}"}.ifBlank{"Keine bestätigten Lernpunkte."}
             budgetStatus.text="KI-Selbstheilung: maximal ${budgetStore.load()} Neustarts pro Lauf"
             val knowledge=KnowledgeSessionRuntime.snapshot()
-            val retained=retainedKnowledge.all()
-            retainedStatus.text=if(adminUnlocked) {
+            val retained=try {
+                retainedKnowledge.all()
+            } catch (_: SecurityException) {
+                ConfirmedKnowledgeIntegrityRuntime.recordSecurityFailure()
+                emptyList()
+            }
+            val integrity=ConfirmedKnowledgeIntegrityRuntime.snapshot()
+            val integrityText=if(integrity.state==KnowledgeIntegrityState.SECURITY_FAILURE) {
+                "⚠ Integritätsfehler: Bestätigtes Wissen ist gesperrt. Nach PIN-Freigabe vollständig löschen.\n"
+            } else {
+                "✓ Verschlüsselte Wissensablage ohne erkannten Integritätsfehler.\n"
+            }
+            retainedStatus.text=integrityText + if(adminUnlocked) {
                 "Bestätigtes Wissen: ${retained.size} Einträge\n" +
                     retained.take(10).joinToString("\n") { "• ${it.summary.take(140)} — ${it.sourceLabels.joinToString(", ")}" }
             } else {
@@ -63,7 +76,7 @@ class AdminActivity : Activity() {
                 "\nVorübergehend pausiert: ${knowledge.suspendedSources}"
         }
         fun requireAdmin():Boolean { if (adminUnlocked) return true; status.text="Bitte zuerst mit der Admin-PIN freigeben."; return false }
-        unlock.setOnClickListener { adminUnlocked=kiosk.disableWithPin(pin.text.toString()); status.text=if(adminUnlocked) "Admin-Modus geöffnet." else "PIN nicht korrekt." }
+        unlock.setOnClickListener { adminUnlocked=kiosk.disableWithPin(pin.text.toString()); status.text=if(adminUnlocked) "Admin-Modus geöffnet." else "PIN nicht korrekt."; refresh() }
         wifi.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }
         confirm.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; profile.confirmAll(); status.text="Alle Lernpunkte bestätigt."; refresh() }
         clear.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; profile.deleteAll(); status.text="Lernprofil gelöscht."; refresh() }
@@ -82,7 +95,8 @@ class AdminActivity : Activity() {
         retainedClear.setOnClickListener {
             if(!requireAdmin()) return@setOnClickListener
             retainedKnowledge.clear()
-            status.text="Dauerhaftes bestätigtes Wissen vollständig gelöscht."
+            ConfirmedKnowledgeIntegrityRuntime.resetAfterDeletion()
+            status.text="Dauerhaftes bestätigtes Wissen vollständig gelöscht; Integritätsalarm zurückgesetzt."
             refresh()
         }
         knowledgeReset.setOnClickListener {
