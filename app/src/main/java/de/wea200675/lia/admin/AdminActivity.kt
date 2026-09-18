@@ -10,6 +10,7 @@ import android.widget.*
 import de.wea200675.lia.core.AndroidSecureStore
 import de.wea200675.lia.core.EncryptedLearningProfile
 import de.wea200675.lia.core.RestartBudgetStore
+import de.wea200675.lia.core.KnowledgeCoverageReport
 
 class AdminActivity : Activity() {
     private lateinit var kiosk: KioskController
@@ -30,6 +31,11 @@ class AdminActivity : Activity() {
         val budgetInput=EditText(this).apply { hint="Neues Restart-Budget (1–5)"; inputType=InputType.TYPE_CLASS_NUMBER; textSize=18f }
         val budgetApply=Button(this).apply { text="Restart-Budget speichern"; textSize=18f }
         val budgetReset=Button(this).apply { text="Restart-Budget zurücksetzen"; textSize=18f }
+        val knowledgeStatus=TextView(this).apply {
+            text=KnowledgeCoverageReport.adminText()
+            textSize=16f
+            setPadding(0,24,0,16)
+        }
         val status=TextView(this).apply { textSize=18f; gravity=Gravity.CENTER }
         fun refresh(){
             review.text=profile.confirmed().joinToString("\n"){"✓ ${it.questionId}: ${it.answer}"}.ifBlank{"Keine bestätigten Lernpunkte."}
@@ -52,6 +58,8 @@ class AdminActivity : Activity() {
             budgetStore.save(RestartBudgetStore.DEFAULT)
             status.text="Restart-Budget auf den sicheren Standard 3 zurückgesetzt."; refresh()
         }
-        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(status); setContentView(box); refresh()
+        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(status)
+        val scroll=ScrollView(this).apply { addView(box) }
+        setContentView(scroll); refresh()
     }
 }
