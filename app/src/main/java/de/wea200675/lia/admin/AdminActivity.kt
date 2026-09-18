@@ -3,6 +3,9 @@ package de.wea200675.lia.admin
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
 import android.text.InputType
 import android.view.Gravity
@@ -21,7 +24,9 @@ import de.wea200675.lia.core.AdminDestructiveActionGuard
 class AdminActivity : Activity() {
     private lateinit var kiosk: KioskController
     private lateinit var profile: EncryptedLearningProfile
-    private val session = AdminContentSession()
+    private val session = AdminContentSession(nowMillis = { SystemClock.elapsedRealtime() })
+    private val sessionHandler = Handler(Looper.getMainLooper())
+    private val expireSession = Runnable { concealAdminContent?.invoke() }
     private var concealAdminContent: (() -> Unit)? = null
     override fun onCreate(state:Bundle?) {
         super.onCreate(state); kiosk=KioskController(this); profile=EncryptedLearningProfile(this)
@@ -33,6 +38,7 @@ class AdminActivity : Activity() {
         val title=TextView(this).apply { text="Lia Admin"; textSize=32f; gravity=Gravity.CENTER }
         val pin=EditText(this).apply { hint="Admin-PIN"; inputType=InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD; textSize=22f }
         val unlock=Button(this).apply { text="Kiosk verlassen"; textSize=20f }
+        val lockNow=Button(this).apply { text="Jetzt sperren"; textSize=20f }
         val wifi=Button(this).apply { text="WLAN-Einstellungen öffnen"; textSize=20f }
         val review=TextView(this).apply { textSize=18f; setPadding(0,24,0,12) }
         val confirm=Button(this).apply { text="Alle gespeicherten Punkte bestätigen"; textSize=18f }
@@ -80,21 +86,26 @@ class AdminActivity : Activity() {
                 "\nQuellen mit Fehlern: ${knowledge.sourcesWithFailures}" +
                 "\nVorübergehend pausiert: ${knowledge.suspendedSources}"
         }
-        fun requireAdmin():Boolean { if (session.isUnlocked) return true; status.text="Bitte zuerst mit der Admin-PIN freigeben."; return false }
+        fun requireAdmin():Boolean { if (session.isUnlocked) return true; concealAdminContent?.invoke(); status.text="Bitte zuerst mit der Admin-PIN freigeben."; return false }
         unlock.setOnClickListener {
+            sessionHandler.removeCallbacks(expireSession)
             session.lock()
             destructiveGuard.cancel()
             refresh()
             val verified = try { kiosk.disableWithPin(pin.text.toString()) } finally { pin.text.clear() }
-            if (verified) session.unlock()
+            if (verified) {
+                session.unlock()
+                sessionHandler.postDelayed(expireSession, 5 * 60_000L)
+            }
             val remaining=kiosk.lockoutRemainingSeconds()
             status.text=when {
-                session.isUnlocked -> "Admin-Modus geöffnet."
+                session.isUnlocked -> "Admin-Modus für höchstens fünf Minuten geöffnet."
                 remaining>0 -> "Zu viele Fehlversuche. Bitte in ${remaining} Sekunden erneut versuchen."
                 else -> "PIN nicht korrekt."
             }
             refresh()
         }
+        lockNow.setOnClickListener { concealAdminContent?.invoke() }
         wifi.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }
         confirm.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; profile.confirmAll(); status.text="Alle Lernpunkte bestätigt."; refresh() }
         clear.setOnClickListener {
@@ -136,8 +147,9 @@ class AdminActivity : Activity() {
             status.text="Wissenspuffer geleert und Quellenfehler zurückgesetzt."
             refresh()
         }
-        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(knowledgeReset); box.addView(retainedStatus); box.addView(retainedClear); box.addView(status)
+        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(lockNow); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(knowledgeReset); box.addView(retainedStatus); box.addView(retainedClear); box.addView(status)
         concealAdminContent = {
+            sessionHandler.removeCallbacks(expireSession)
             session.lock()
             destructiveGuard.cancel()
             pin.text.clear()
@@ -147,6 +159,11 @@ class AdminActivity : Activity() {
         }
         val scroll=ScrollView(this).apply { addView(box) }
         setContentView(scroll); refresh()
+    }
+    override fun onDestroy() {
+        sessionHandler.removeCallbacks(expireSession)
+        concealAdminContent = null
+        super.onDestroy()
     }
     override fun onPause() {
         concealAdminContent?.invoke()
