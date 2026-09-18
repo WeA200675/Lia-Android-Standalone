@@ -29,6 +29,7 @@ class MainActivity : Activity() {
     private var speaker: TextToSpeech? = null
     private lateinit var localRuntime: SupervisedLocalRuntime
     private lateinit var answerOrchestrator: AnswerOrchestrator
+    private lateinit var confirmedKnowledge: ConfirmedKnowledgeRepository
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +57,7 @@ class MainActivity : Activity() {
         )
         val today = LocalDate.now()
         val secureStore = AndroidSecureStore(this)
+        confirmedKnowledge = ConfirmedKnowledgeRepository(secureStore)
         val dailyPlan = DailyPlanRepository(TrainingCache(secureStore)).forDate(today)
         val promptProgress = DailyPromptProgress(secureStore)
         index = promptProgress.nextIndex(today, dailyPlan.prompts.size)
@@ -74,6 +76,8 @@ class MainActivity : Activity() {
         val send = Button(this).apply { text = "💬 Mit Lia sprechen"; textSize = 20f }
         val listen = Button(this).apply { text = "🎙️ Sprechen"; textSize = 20f }
         val reply = TextView(this).apply { textSize = 21f; setPadding(0, 16, 0, 16); gravity = Gravity.CENTER }
+        val remember = Button(this).apply { text = "📚 Dieses Wissen merken"; textSize = 18f; isEnabled = false }
+        var lastCandidate: ConfirmedKnowledgeCandidate? = null
         val question = TextView(this).apply { textSize = 23f; gravity = Gravity.CENTER; setPadding(0, 16, 0, 12) }
         val answer = EditText(this).apply { hint = "Tagesantwort (freiwillig)"; textSize = 20f; minLines = 2 }
         val save = Button(this).apply { text = "💾 Antwort speichern"; textSize = 18f }
@@ -97,7 +101,7 @@ class MainActivity : Activity() {
             reply.text = text
             speaker?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "lia-reply")
         }
-        fun presentAnswer(result: OrchestratedAnswer) {
+        fun presentAnswer(questionText: String, result: OrchestratedAnswer) {
             val provenance = result.knowledgeProvenance
             val sourceNote = if (provenance == null) "" else {
                 val origin = if (provenance.origin == KnowledgeOrigin.LIVE) {
@@ -108,6 +112,8 @@ class MainActivity : Activity() {
                 "\n\nℹ Quellen: ${provenance.sourceLabels.joinToString(", ")} · $origin"
             }
             reply.text = result.text + sourceNote
+            lastCandidate = ConfirmedKnowledgeCandidate.from(questionText, result)
+            remember.isEnabled = lastCandidate != null
             speaker?.speak(result.text, TextToSpeech.QUEUE_FLUSH, null, "lia-reply")
         }
         fun handleConversation(text: String) {
@@ -124,8 +130,18 @@ class MainActivity : Activity() {
                     onlineAllowed = webMode != WebAccessMode.OFFLINE
                 )
                 val result = answerOrchestrator.answer(boundedText, prompt)
-                presentAnswer(result)
+                presentAnswer(boundedText, result)
             }
+        }
+        remember.setOnClickListener {
+            val candidate = lastCandidate
+            if (candidate == null) {
+                reply.text = "Diese Antwort hat keine überprüfbare Quelle und wird nicht dauerhaft gespeichert."
+                return@setOnClickListener
+            }
+            val saved = confirmedKnowledge.saveConfirmed(candidate.summary, candidate.sourceLabels, candidate.fingerprint)
+            reply.text = if (saved) "Dieses Wissen wurde lokal verschlüsselt gespeichert." else "Dieses Wissen konnte aus Sicherheitsgründen nicht gespeichert werden."
+            if (saved) { lastCandidate = null; remember.isEnabled = false }
         }
         send.setOnClickListener {
             handleConversation(chat.text.toString())
@@ -167,7 +183,7 @@ class MainActivity : Activity() {
         skip.setOnClickListener { reply.text = "Übersprungen – das ist jederzeit in Ordnung."; next() }
         web.setOnClickListener { webMode = when (webMode) { WebAccessMode.OFFLINE -> WebAccessMode.AUTO_ANONYMIZED_GENERIC; WebAccessMode.AUTO_ANONYMIZED_GENERIC -> WebAccessMode.ASK_BEFORE_PERSONAL; else -> WebAccessMode.OFFLINE }; webStore.set(webMode); web.text = "Internet: $webMode" }
         admin.setOnClickListener { startActivity(Intent(this, AdminActivity::class.java)) }
-        root.addView(title); root.addView(status); root.addView(chat, LinearLayout.LayoutParams(-1, -2)); root.addView(listen); root.addView(send); root.addView(reply); root.addView(question); root.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); root.addView(save); root.addView(skip); root.addView(web); root.addView(admin); setContentView(root)
+        root.addView(title); root.addView(status); root.addView(chat, LinearLayout.LayoutParams(-1, -2)); root.addView(listen); root.addView(send); root.addView(reply); root.addView(remember); root.addView(question); root.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); root.addView(save); root.addView(skip); root.addView(web); root.addView(admin); setContentView(root)
     }
 
     override fun onDestroy() {
