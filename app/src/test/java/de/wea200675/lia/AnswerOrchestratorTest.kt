@@ -77,6 +77,22 @@ class AnswerOrchestratorTest {
         assertTrue(answer.text.isNotBlank())
     }
 
+    @Test fun personalizedHighStakesDecisionSkipsModelAndWeb() {
+        var modelCalled = false
+        var webCalled = false
+        val runtime = runtime { modelCalled = true; Result.success("unsicher") }
+        val web = gateway { webCalled = true; Result.success("unsicher") }
+
+        val answer = runSuspend {
+            AnswerOrchestrator(runtime, web).answer("Soll ich meine Dosis ändern?", "prompt")
+        }
+
+        assertEquals(AnswerSource.SAFETY, answer.source)
+        assertFalse(modelCalled)
+        assertFalse(webCalled)
+        assertTrue(answer.text.contains("Arzt") || answer.text.contains("Apotheke"))
+    }
+
     private fun runtime(block: suspend (String) -> Result<String>) = object : ModelRuntime {
         override suspend fun generate(prompt: String) = block(prompt)
         override fun isReady() = true
