@@ -1,5 +1,7 @@
 package de.wea200675.lia.core
 
+import kotlinx.coroutines.CancellationException
+
 enum class AnswerSource { SAFETY, LOCAL_AI, CONFIRMED_KNOWLEDGE, OFFLINE_FALLBACK }
 
 data class OrchestratedAnswer(
@@ -56,13 +58,13 @@ class AnswerOrchestrator(
         } else null
         val webResult = retainedResult ?: if (style == ConversationStyle.KNOWLEDGE && webGateway != null) {
             if (webGateway is ProvenanceWebGateway) {
-                webGateway.queryWithProvenance(redacted).getOrNull()?.let { bundle ->
+                recoverableCall { webGateway.queryWithProvenance(redacted) }.getOrNull()?.let { bundle ->
                     UntrustedKnowledgeBoundary.sanitize(bundle.text)?.let {
                         it to bundle.provenance
                     }
                 }
             } else {
-                webGateway.query(redacted).getOrNull()
+                recoverableCall { webGateway.query(redacted) }.getOrNull()
                     ?.let(UntrustedKnowledgeBoundary::sanitize)
                     ?.let { it to null }
             }
@@ -75,7 +77,7 @@ class AnswerOrchestrator(
             "$prompt\n\n${UntrustedKnowledgeBoundary.asReferenceBlock(webContext)}"
         }
 
-        val localAnswer = runtime.generate(enrichedPrompt)
+        val localAnswer = recoverableCall { runtime.generate(enrichedPrompt) }
             .getOrNull()
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
@@ -113,4 +115,22 @@ class AnswerOrchestrator(
             webContextUsed = webContext != null
         )
     }
+
+    /**
+     * Normalize recoverable adapter failures without turning cancellation into
+     * fallback work. Errors remain visible to the runtime instead of being hidden.
+     */
+    private suspend fun <T> recoverableCall(block: suspend () -> Result<T>): Result<T> {
+        val result = try {
+            block()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            Result.failure(failure)
+        }
+        val failure = result.exceptionOrNull()
+        if (failure is CancellationException) throw failure
+        return result
+    }
+
 }
