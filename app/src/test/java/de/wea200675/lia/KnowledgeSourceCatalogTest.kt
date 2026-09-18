@@ -7,16 +7,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class KnowledgeSourceCatalogTest {
-    @Test fun catalogContainsOnlyExplicitWikimediaAllowlist() {
-        assertEquals(7, KnowledgeSourceCatalog.sources.size)
-        assertTrue(KnowledgeSourceCatalog.sources.all {
-            it.host.endsWith(".wikipedia.org") ||
-                it.host.endsWith(".wiktionary.org") ||
-                it.host.endsWith(".wikibooks.org") ||
-                it.host.endsWith(".wikivoyage.org") ||
-                it.host.endsWith(".wikisource.org") ||
-                it.host == "www.wikidata.org"
-        })
+    @Test fun catalogContainsExactlySeventeenAuditedHosts() {
+        val expectedHosts = setOf(
+            "de.wikipedia.org", "en.wikipedia.org", "de.wiktionary.org",
+            "de.wikibooks.org", "de.wikivoyage.org", "de.wikisource.org",
+            "www.wikidata.org", "commons.wikimedia.org", "de.wikinews.org",
+            "de.wikiquote.org", "de.wikiversity.org", "species.wikimedia.org",
+            "www.mediawiki.org", "meta.wikimedia.org", "www.wikifunctions.org",
+            "en.wikibooks.org", "en.wikivoyage.org"
+        )
+        assertEquals(17, KnowledgeSourceCatalog.sources.size)
+        assertEquals(expectedHosts, KnowledgeSourceCatalog.sources.map { it.host }.toSet())
         assertFalse(KnowledgeSourceCatalog.isAllowed("example.org"))
     }
 
@@ -30,6 +31,17 @@ class KnowledgeSourceCatalogTest {
     @Test fun travelAndLearningUseSpecializedSources() {
         assertEquals("wikivoyage-de", KnowledgeSourceCatalog.select("Reise nach Hamburg").first().id)
         assertEquals("wikibooks-de", KnowledgeSourceCatalog.select("Anleitung zum Zeichnen").first().id)
+    }
+
+    @Test fun addedTopicsRouteToTheirSpecializedKnowledgeBase() {
+        assertEquals("wikiquote-de", KnowledgeSourceCatalog.select("Wer sagte dieses Zitat?").first().id)
+        assertEquals("wikinews-de", KnowledgeSourceCatalog.select("Welche Nachricht ist aktuell?").first().id)
+        assertEquals("wikiversity-de", KnowledgeSourceCatalog.select("Eine Lektion als Lernmaterial").first().id)
+        assertEquals("wikispecies", KnowledgeSourceCatalog.select("Welche Tierart und Gattung?").first().id)
+        assertEquals("commons", KnowledgeSourceCatalog.select("Gibt es ein Bild davon?").first().id)
+        assertEquals("mediawiki", KnowledgeSourceCatalog.select("MediaWiki installieren").first().id)
+        assertEquals("meta-wiki", KnowledgeSourceCatalog.select("Wikimedia Foundation Community").first().id)
+        assertEquals("wikifunctions", KnowledgeSourceCatalog.select("Algorithmus und Berechnung").first().id)
     }
 
     @Test fun genericQuestionUsesGermanWikipediaFirst() {
