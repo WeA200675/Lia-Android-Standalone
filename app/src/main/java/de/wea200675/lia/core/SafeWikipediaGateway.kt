@@ -8,8 +8,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
- * Narrow, read-only knowledge gateway. It can contact only German Wikipedia
- * over HTTPS, never follows redirects, and rejects personal-looking queries.
+ * Bounded read-only Wikimedia cascade. The historical class name is retained
+ * for source compatibility; all reachable hosts come from the audited catalog.
  */
 class SafeWikipediaGateway(
     private val enabled: () -> Boolean
@@ -20,56 +20,69 @@ class SafeWikipediaGateway(
             val approved = requireNotNull(OutboundQueryPolicy.approved(anonymizedQuery)) {
                 "Query is not eligible for anonymous Internet lookup"
             }
-            val encoded = URLEncoder.encode(approved, Charsets.UTF_8.name())
-            val endpoint = URL(
-                "https://de.wikipedia.org/w/api.php?action=query&list=search&utf8=1&format=json&srlimit=1&srprop=snippet&srsearch=$encoded"
-            )
-            require(endpoint.protocol == "https" && endpoint.host == "de.wikipedia.org")
-            val connection = (endpoint.openConnection() as HttpURLConnection).apply {
-                instanceFollowRedirects = false
-                connectTimeout = 3500
-                readTimeout = 4500
-                requestMethod = "GET"
-                setRequestProperty("Accept", "application/json")
-                setRequestProperty("User-Agent", "Lia-Android-Standalone/0.1 (local knowledge assistant)")
+            val results = KnowledgeSourceCatalog.select(approved)
+                .mapNotNull { source -> runCatching { querySource(source, approved) }.getOrNull() }
+                .take(MAX_RESULTS)
+            check(results.isNotEmpty()) { "No curated knowledge result" }
+            results.joinToString("\n\n")
+        }
+    }
+
+    private fun querySource(source: KnowledgeSource, query: String): String {
+        require(KnowledgeSourceCatalog.isAllowed(source.host))
+        val encoded = URLEncoder.encode(query, Charsets.UTF_8.name())
+        val endpoint = URL(
+            "https://${source.host}/w/api.php?action=query&list=search&utf8=1&format=json&srlimit=1&srprop=snippet&srsearch=$encoded"
+        )
+        require(endpoint.protocol == "https" && KnowledgeSourceCatalog.isAllowed(endpoint.host))
+        val connection = (endpoint.openConnection() as HttpURLConnection).apply {
+            instanceFollowRedirects = false
+            connectTimeout = CONNECT_TIMEOUT_MS
+            readTimeout = READ_TIMEOUT_MS
+            requestMethod = "GET"
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("User-Agent", "Lia-Android-Standalone/0.1 (local knowledge assistant)")
+        }
+        return try {
+            check(connection.responseCode == HttpURLConnection.HTTP_OK) {
+                "Knowledge source unavailable"
             }
-            try {
-                check(connection.responseCode == HttpURLConnection.HTTP_OK) {
-                    "Knowledge service unavailable"
+            val bytes = connection.inputStream.use { input ->
+                val output = java.io.ByteArrayOutputStream()
+                val buffer = ByteArray(4096)
+                while (output.size() <= MAX_RESPONSE_BYTES) {
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    output.write(buffer, 0, read)
                 }
-                val bytes = connection.inputStream.use { input ->
-                    val output = java.io.ByteArrayOutputStream()
-                    val buffer = ByteArray(4096)
-                    while (output.size() <= MAX_RESPONSE_BYTES) {
-                        val read = input.read(buffer)
-                        if (read < 0) break
-                        output.write(buffer, 0, read)
-                    }
-                    check(output.size() <= MAX_RESPONSE_BYTES) { "Knowledge response too large" }
-                    output.toByteArray()
-                }
-                val first = JSONObject(String(bytes, Charsets.UTF_8))
-                    .getJSONObject("query")
-                    .getJSONArray("search")
-                    .optJSONObject(0)
-                    ?: error("No reviewed knowledge result")
-                val title = first.optString("title").trim().take(160)
-                val snippet = first.optString("snippet")
-                    .replace(Regex("<[^>]+>"), "")
-                    .replace("&quot;", "\"")
-                    .replace("&#039;", "'")
-                    .replace("&amp;", "&")
-                    .trim()
-                    .take(1800)
-                check(title.isNotEmpty() && snippet.isNotEmpty()) { "Empty knowledge result" }
-                "$title: $snippet"
-            } finally {
-                connection.disconnect()
+                check(output.size() <= MAX_RESPONSE_BYTES) { "Knowledge response too large" }
+                output.toByteArray()
             }
+            val first = JSONObject(String(bytes, Charsets.UTF_8))
+                .getJSONObject("query")
+                .getJSONArray("search")
+                .optJSONObject(0)
+                ?: error("No result")
+            val title = first.optString("title").trim().take(160)
+            val snippet = first.optString("snippet")
+                .replace(Regex("<[^>]+>"), "")
+                .replace("&quot;", "\"")
+                .replace("&#039;", "'")
+                .replace("&amp;", "&")
+                .trim()
+                .take(MAX_SNIPPET_CHARS)
+            check(title.isNotEmpty() && snippet.isNotEmpty()) { "Empty knowledge result" }
+            "[${source.label}] $title: $snippet"
+        } finally {
+            connection.disconnect()
         }
     }
 
     private companion object {
+        const val MAX_RESULTS = 2
         const val MAX_RESPONSE_BYTES = 128 * 1024
+        const val MAX_SNIPPET_CHARS = 1200
+        const val CONNECT_TIMEOUT_MS = 2000
+        const val READ_TIMEOUT_MS = 2500
     }
 }
