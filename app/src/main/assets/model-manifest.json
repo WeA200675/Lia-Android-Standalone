@@ -1,0 +1,16 @@
+{
+  "format": "GGUF",
+  "primary": {
+    "id": "lia-local-3b-q4",
+    "file": "lia-local-3b-q4.gguf",
+    "sha256": "REPLACE_WITH_RELEASE_HASH",
+    "max_ram_mb": 4096
+  },
+  "recovery": {
+    "id": "lia-recovery-1.5b-q4",
+    "file": "lia-recovery-1.5b-q4.gguf",
+    "sha256": "REPLACE_WITH_RELEASE_HASH",
+    "max_ram_mb": 2300
+  },
+  "policy": "Never execute a model whose SHA-256 is not verified. Never download automatically."
+}
