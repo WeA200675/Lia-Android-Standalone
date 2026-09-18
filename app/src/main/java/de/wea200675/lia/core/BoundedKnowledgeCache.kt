@@ -36,7 +36,7 @@ class BoundedKnowledgeCache(
 
     @Synchronized
     fun put(query: String, value: String, ttlMillis: Long) {
-        require(maxEntries in 1..128)
+        require(maxEntries in 1..256)
         require(ttlMillis in KnowledgeFreshnessPolicy.MINUTE_MS..(30 * KnowledgeFreshnessPolicy.DAY_MS))
         val bounded = value.trim().take(MAX_VALUE_CHARS)
         if (bounded.isEmpty()) return
