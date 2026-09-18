@@ -10,10 +10,12 @@ class ResilientLocalRuntime(
     private val fallback: ModelRuntime = SafeOfflineRuntime()
 ) : ModelRuntime {
     private var nativeReady = false
+    private var nativeFailureObserved = false
 
     fun loadModel(spec: ModelSpec, file: File): Boolean {
         native.close()
         nativeReady = false
+        nativeFailureObserved = false
         val verified = VerifiedModel.from(spec, file) ?: return false
         nativeReady = runCatching { native.load(verified) }.getOrDefault(false)
         return nativeReady
@@ -24,8 +26,16 @@ class ResilientLocalRuntime(
             val result = runCatching { native.generate(prompt) }.getOrElse { Result.failure(it) }
             if (result.isSuccess) return result
             nativeReady = false
+            nativeFailureObserved = true
         }
         return fallback.generate(prompt)
+    }
+
+    /** Returns and clears the flag so a supervisor can perform one bounded recovery action. */
+    fun consumeNativeFailure(): Boolean {
+        val observed = nativeFailureObserved
+        nativeFailureObserved = false
+        return observed
     }
 
     override fun isReady(): Boolean = nativeReady || fallback.isReady()
