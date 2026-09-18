@@ -28,6 +28,7 @@ class MainActivity : Activity() {
     private var recognizer: SpeechRecognizer? = null
     private var speaker: TextToSpeech? = null
     private lateinit var localRuntime: SupervisedLocalRuntime
+    private lateinit var answerOrchestrator: AnswerOrchestrator
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,6 +40,7 @@ class MainActivity : Activity() {
         val cap = DeviceCapabilityProbe.read(this)
         val perf = ResourceGovernor(this).level()
         localRuntime = ModelRuntimeBootstrap(this).createSupervised()
+        answerOrchestrator = AnswerOrchestrator(localRuntime)
         val webStore = WebModeStore(this)
         var webMode = webStore.get()
         val today = LocalDate.now()
@@ -84,21 +86,25 @@ class MainActivity : Activity() {
             reply.text = text
             speaker?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "lia-reply")
         }
-        send.setOnClickListener {
-            val t = chat.text.toString()
-            if (t.isBlank()) {
+        fun handleConversation(text: String) {
+            val boundedText = text.trim()
+            if (boundedText.isEmpty()) {
                 presentReply("Ich höre dir gern zu.")
-            } else if (!localRuntime.isNativeReady()) {
-                presentReply(router.offlineReply(router.classify(t)))
-            } else {
-                reply.text = "Ich denke kurz nach …"
-                uiScope.launch {
-                    val answer = localRuntime.generate(t).getOrElse {
-                        router.offlineReply(router.classify(t))
-                    }
-                    presentReply(answer)
-                }
+                return
             }
+            reply.text = "Ich denke kurz nach …"
+            uiScope.launch {
+                val prompt = PromptContext.build(
+                    userText = boundedText,
+                    profile = profile.confirmed(),
+                    onlineAllowed = webMode != WebAccessMode.OFFLINE
+                )
+                val result = answerOrchestrator.answer(boundedText, prompt)
+                presentReply(result.text)
+            }
+        }
+        send.setOnClickListener {
+            handleConversation(chat.text.toString())
             chat.text.clear()
         }
         listen.setOnClickListener {
@@ -110,16 +116,8 @@ class MainActivity : Activity() {
                     chat.setText(t)
                     if (t.isBlank()) {
                         presentReply("Ich habe nichts verstanden.")
-                    } else if (!localRuntime.isNativeReady()) {
-                        presentReply(router.offlineReply(router.classify(t)))
                     } else {
-                        reply.text = "Ich denke kurz nach …"
-                        uiScope.launch {
-                            val answer = localRuntime.generate(t).getOrElse {
-                                router.offlineReply(router.classify(t))
-                            }
-                            presentReply(answer)
-                        }
+                        handleConversation(t)
                     }
                 }
                 override fun onError(error: Int) { reply.text = "Ich konnte dich gerade nicht verstehen. Bitte versuche es noch einmal oder schreibe mir." }
