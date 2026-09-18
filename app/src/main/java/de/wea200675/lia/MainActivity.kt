@@ -40,9 +40,12 @@ class MainActivity : Activity() {
         val cap = DeviceCapabilityProbe.read(this)
         val perf = ResourceGovernor(this).level()
         localRuntime = ModelRuntimeBootstrap(this).createSupervised()
-        answerOrchestrator = AnswerOrchestrator(localRuntime)
         val webStore = WebModeStore(this)
         var webMode = webStore.get()
+        answerOrchestrator = AnswerOrchestrator(
+            localRuntime,
+            SafeWikipediaGateway { webMode != WebAccessMode.OFFLINE }
+        )
         val today = LocalDate.now()
         val secureStore = AndroidSecureStore(this)
         val dailyPlan = DailyPlanRepository(TrainingCache(secureStore)).forDate(today)
