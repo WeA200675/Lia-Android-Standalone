@@ -13,8 +13,5 @@ class ResilientWebGateway(
 ) : WebGateway {
     override suspend fun query(anonymizedQuery: String): Result<String> =
         primary.query(anonymizedQuery).getOrElse { error ->
-            fallback.query(anonymizedQuery).recoverCatching {
-                "Die Websuche ist momentan nicht verfügbar. Lokaler Offline-Modus aktiv."
-            }
-        }
+            Result.success(fallback.query(anonymizedQuery).getOrElse {\n                "Die Websuche ist momentan nicht verfügbar. Lokaler Offline-Modus aktiv."\n            })       }
 }
