@@ -1,6 +1,8 @@
 package de.wea200675.lia.core
 
 /** Small injectable boundary around the eventual llama.cpp/LiteRT JNI implementation. */
+enum class NativeRuntimeState { UNINITIALIZED, READY, UNAVAILABLE }
+
 interface NativeInferenceBridge {
     fun load(modelPath: String, modelId: String, threads: Int): Boolean
     fun generate(prompt: String, maxTokens: Int): String
@@ -16,12 +18,15 @@ class JniNativeInference(
     private val logicalThreads: () -> Int = { Runtime.getRuntime().availableProcessors() }
 ) : NativeInference {
     private var loaded = false
+    var state: NativeRuntimeState = NativeRuntimeState.UNINITIALIZED
+        private set
 
     override fun load(model: VerifiedModel): Boolean {
         close()
         val threads = logicalThreads().coerceAtLeast(1)
         loaded = runCatching { bridge.load(model.file.absolutePath, model.spec.id, threads) }
             .getOrDefault(false)
+        state = if (loaded) NativeRuntimeState.READY else NativeRuntimeState.UNAVAILABLE
         return loaded
     }
 
@@ -33,6 +38,7 @@ class JniNativeInference(
     override fun close() {
         if (loaded) runCatching { bridge.close() }
         loaded = false
+        state = NativeRuntimeState.UNINITIALIZED
     }
 }
 
