@@ -5,8 +5,8 @@ import java.time.LocalDate
 /** Single source for the current 25-prompt plan used by UI and background work. */
 class DailyPlanRepository(
     private val cache: TrainingCache,
-    private val planner: (LocalDate) -> DailyTrainingPlan = DailyTrainingPlanner::forDate,
-    private val evolutionStore: LearningEvolutionStore? = null
+    private val evolutionStore: LearningEvolutionStore? = null,
+    private val planner: (LocalDate) -> DailyTrainingPlan = DailyTrainingPlanner::forDate
 ) {
     fun forDate(date: LocalDate): DailyTrainingPlan {
         val cached = runCatching { cache.load() }.getOrNull()
