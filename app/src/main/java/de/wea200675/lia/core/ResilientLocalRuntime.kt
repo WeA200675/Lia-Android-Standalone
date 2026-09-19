@@ -42,6 +42,12 @@ class ResilientLocalRuntime(
 
     fun isNativeReady(): Boolean = nativeReady
 
+    fun nativeState(): NativeRuntimeState = when {
+        nativeReady -> NativeRuntimeState.READY
+        nativeFailureObserved -> NativeRuntimeState.UNAVAILABLE
+        else -> NativeRuntimeState.UNINITIALIZED
+    }
+
     fun close() {
         native.close()
         nativeReady = false

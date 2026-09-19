@@ -29,6 +29,8 @@ class SupervisedLocalRuntime(
 
     fun isNativeReady(): Boolean = current.isNativeReady()
 
+    fun nativeState(): NativeRuntimeState = current.nativeState()
+
     fun state(): String = coordinator.state
 
     fun restartBudget(): Int = coordinator.restartBudget
