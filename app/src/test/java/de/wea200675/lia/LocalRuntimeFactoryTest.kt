@@ -67,7 +67,7 @@ class LocalRuntimeFactoryTest {
         val primary = spec("primary", "primary.gguf", directory)
         val recovery = spec("recovery", "recovery.gguf", directory)
         val runtime = LocalRuntimeFactory(directory, nativeFactory = {
-            fakeNative { model ->
+            fakeNativeResult { model ->
                 loadedIds += model.spec.id
                 model.spec.id == "recovery"
             }
@@ -82,6 +82,12 @@ class LocalRuntimeFactoryTest {
 
     private fun fakeNative(onLoad: (VerifiedModel) -> Unit) = object : NativeInference {
         override fun load(model: VerifiedModel): Boolean { onLoad(model); return true }
+        override fun generate(prompt: String, maxTokens: Int) = Result.success("ok")
+        override fun close() {}
+    }
+
+    private fun fakeNativeResult(onLoad: (VerifiedModel) -> Boolean) = object : NativeInference {
+        override fun load(model: VerifiedModel): Boolean = onLoad(model)
         override fun generate(prompt: String, maxTokens: Int) = Result.success("ok")
         override fun close() {}
     }
