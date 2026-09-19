@@ -2,6 +2,7 @@ package de.wea200675.lia
 
 import de.wea200675.lia.core.*
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -19,7 +20,7 @@ class AdaptiveLearningServiceTest {
         val state = service.record(LearningFeedbackSignal("Meine Telefonnummer ist 0123456789, das war hilfreich.", true))
         assertEquals(1, state.acceptedSignals)
         assertEquals(DevelopmentStage.FOUNDATION, state.stage)
-        assertTrue(store.get("lia.learning.feedback.v1")!!.toString(Charsets.UTF_8).contains("[TELEFON]"))
+        assertFalse(store.get("lia.learning.feedback.v1")!!.toString(Charsets.UTF_8).contains("0123456789"))
     }
 
     @Test fun ignoresDuplicatesAndOversizedFeedback() {
