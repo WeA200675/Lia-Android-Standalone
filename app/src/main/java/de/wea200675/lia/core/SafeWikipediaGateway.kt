@@ -62,7 +62,7 @@ class SafeWikipediaGateway(
         require(KnowledgeSourceCatalog.isAllowed(source.host))
         val encoded = URLEncoder.encode(query, Charsets.UTF_8.name())
         val endpoint = URL(
-            "https://${source.host}/w/api.php?action=query&list=search&utf8=1&format=json&srlimit=1&srprop=snippet&srsearch=$encoded"
+            "https://${source.host}/w/api.php?action=query&generator=search&utf8=1&format=json&gsrlimit=1&gsrsearch=$encoded&prop=extracts&exintro=1&explaintext=1"
         )
         require(endpoint.protocol == "https" && KnowledgeSourceCatalog.isAllowed(endpoint.host))
         val connection = (endpoint.openConnection() as HttpURLConnection).apply {
@@ -88,19 +88,16 @@ class SafeWikipediaGateway(
                 check(output.size() <= MAX_RESPONSE_BYTES) { "Knowledge response too large" }
                 output.toByteArray()
             }
-            val first = JSONObject(String(bytes, Charsets.UTF_8))
-                .getJSONObject("query")
-                .getJSONArray("search")
-                .optJSONObject(0)
+            val pages = JSONObject(String(bytes, Charsets.UTF_8))
+                .optJSONObject("query")
+                ?.optJSONObject("pages")
+                ?: error("No result")
+            val first = pages.keys().asSequence()
+                .map { pages.getJSONObject(it) }
+                .firstOrNull()
                 ?: error("No result")
             val title = first.optString("title").trim().take(160)
-            val snippet = first.optString("snippet")
-                .replace(Regex("<[^>]+>"), "")
-                .replace("&quot;", "\"")
-                .replace("&#039;", "'")
-                .replace("&amp;", "&")
-                .trim()
-                .take(MAX_SNIPPET_CHARS)
+            val snippet = first.optString("extract").trim().take(MAX_SNIPPET_CHARS)
             check(title.isNotEmpty() && snippet.isNotEmpty()) { "Empty knowledge result" }
             "[${source.label}] $title: $snippet"
         } finally {
