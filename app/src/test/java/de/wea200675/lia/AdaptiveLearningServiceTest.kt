@@ -15,7 +15,7 @@ class AdaptiveLearningServiceTest {
     @Test fun recordsAnonymizedFeedbackAndAdvancesEvolution() {
         val store = MemoryStore()
         val service = AdaptiveLearningService(LearningEvolutionStore(store), store)
-        val state = service.record(FeedbackSignal("Meine Telefonnummer ist 0123456789, das war hilfreich.", true))
+        val state = service.record(LearningFeedbackSignal("Meine Telefonnummer ist 0123456789, das war hilfreich.", true))
         assertEquals(1, state.acceptedSignals)
         assertEquals(DevelopmentStage.FOUNDATION, state.stage)
         assertEquals("meine telefonnummer ist [redacted], das war hilfreich.", store.get("lia.learning.feedback.v1")!!.toString(Charsets.UTF_8))

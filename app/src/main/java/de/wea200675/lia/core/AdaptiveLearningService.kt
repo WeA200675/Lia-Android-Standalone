@@ -1,6 +1,6 @@
 package de.wea200675.lia.core
 
-data class FeedbackSignal(
+data class LearningFeedbackSignal(
     val text: String,
     val positive: Boolean,
     val kind: LearningSignalKind = LearningSignalKind.FEEDBACK
@@ -11,7 +11,7 @@ class AdaptiveLearningService(
     private val secureStore: SecureStore,
     private val historyKey: String = "lia.learning.feedback.v1"
 ) {
-    fun record(signal: FeedbackSignal): LearningEvolutionState {
+    fun record(signal: LearningFeedbackSignal): LearningEvolutionState {
         val normalized = normalize(signal.text)
         if (normalized.isEmpty() || normalized.length > LearningEvolution.MAX_SIGNAL_LENGTH) {
             return evolutionStore.load()
