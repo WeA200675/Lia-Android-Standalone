@@ -68,7 +68,6 @@ class AnswerOrchestrator(
             } else {
                 recoverableCall { webGateway.query(redacted) }.getOrNull()
                     ?.let(UntrustedKnowledgeBoundary::sanitize)
-                    ?.takeIf { KnowledgeRelevance.accepts(boundedText, it) }
                     ?.let { it to null }
             }
         } else null
