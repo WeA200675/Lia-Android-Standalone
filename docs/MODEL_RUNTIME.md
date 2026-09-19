@@ -1,9 +1,5 @@
-# Lokale Modelllaufzeit
+undefined
 
-Die App lädt Modelle ausschließlich aus dem lokalen App-Speicher. Vor der Nutzung wird die SHA-256-Prüfsumme gegen `model-manifest.json` verglichen. Fehlt das Modell oder stimmt der Hash nicht, bleibt Lia im sicheren Text-Fallback.
+## Erweiterbarer Modellspeicher
 
-Die Laufzeit versucht zuerst das Primärmodell und danach genau einmal das Recovery-Modell. Fehler reduzieren ein begrenztes Restart-Budget; bei erschöpftem Budget wird `BLOCKED` gesetzt. Es gibt keine Endlosschleife.
-
-Die Zahl der Android-logischen CPUs wird für die Inferenz berücksichtigt. Das ist die Android-Entsprechung zur Nutzung von SMT/Hyperthreading; Android liefert keinen separaten SMT-Schalter. Temperatur, Akku und Speicherdruck dürfen die Threadzahl jederzeit reduzieren.
-
-Automatische Downloads und unbestätigtes Nachtrainieren des Grundmodells sind ausgeschlossen.
+Modelle werden zunächst im privaten internen App-Speicher gesucht. Wenn dort weniger als 1 GiB frei ist, verwendet Lia den app-eigenen externen Speicher nur dann, wenn Android ihn als eingehängt meldet. Es werden keine öffentlichen Verzeichnisse und keine beliebigen SD-Kartenpfade verwendet. Jede Datei bleibt vor der Nutzung SHA-256-geprüft; fehlt die Datei oder stimmt der Hash nicht, bleibt der Offline-Fallback aktiv.

@@ -6,7 +6,7 @@ import java.io.File
 /** Safe app-start boundary for manifest loading, verified model selection and offline fallback. */
 class ModelRuntimeBootstrap(
     private val context: Context,
-    private val modelDirectory: File = File(context.filesDir, "models")
+    private val modelDirectory: File = ModelStorageLocator.forContext(context).directory
 ) {
     fun create(): ResilientLocalRuntime {
         val fallback = ResilientLocalRuntime(UnavailableNativeInference())
