@@ -2,7 +2,7 @@ package de.wea200675.lia.core
 
 import java.io.File
 
-/** Creates the resilient local runtime and loads only the first verified primary/recovery model. */
+/** Creates the resilient local runtime and loads the first verified model that also initializes successfully. */
 class LocalRuntimeFactory(
     private val modelDirectory: File,
     private val nativeFactory: () -> NativeInference = { JniNativeInference(SystemJniInferenceBridge()) },
@@ -13,12 +13,10 @@ class LocalRuntimeFactory(
 
     fun create(primary: ModelSpec, recovery: ModelSpec): ResilientLocalRuntime {
         val runtime = ResilientLocalRuntime(nativeFactory(), fallback)
-        val candidate = listOf(primary, recovery).firstOrNull { spec ->
-            ModelVerifier.verified(File(modelDirectory, spec.fileName), spec.sha256)
-        }
-        if (candidate != null) {
-            runtime.loadModel(candidate, File(modelDirectory, candidate.fileName))
-        }
+        listOf(primary, recovery)
+            .map { it to File(modelDirectory, it.fileName) }
+            .filter { (spec, file) -> ModelVerifier.verified(file, spec.sha256) }
+            .firstOrNull { (spec, file) -> runtime.loadModel(spec, file) }
         return runtime
     }
 }
