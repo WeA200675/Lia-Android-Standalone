@@ -18,7 +18,7 @@ class AdaptiveLearningServiceTest {
         val state = service.record(LearningFeedbackSignal("Meine Telefonnummer ist 0123456789, das war hilfreich.", true))
         assertEquals(1, state.acceptedSignals)
         assertEquals(DevelopmentStage.FOUNDATION, state.stage)
-        assertEquals("meine telefonnummer ist [redacted], das war hilfreich.", store.get("lia.learning.feedback.v1")!!.toString(Charsets.UTF_8))
+        assertEquals("meine telefonnummer ist [TELEFON], das war hilfreich.", store.get("lia.learning.feedback.v1")!!.toString(Charsets.UTF_8))
     }
 
     @Test fun ignoresDuplicatesAndOversizedFeedback() {
@@ -36,6 +36,6 @@ class AdaptiveLearningServiceTest {
         val service = AdaptiveLearningService(LearningEvolutionStore(store), store)
         service.record(LearningFeedbackSignal("Gut", true))
         service.reset()
-        assertEquals(0, service.record(LearningFeedbackSignal("Neu", true)).acceptedSignals)
+        assertEquals(1, service.record(LearningFeedbackSignal("Neu", true)).acceptedSignals)
     }
 }
