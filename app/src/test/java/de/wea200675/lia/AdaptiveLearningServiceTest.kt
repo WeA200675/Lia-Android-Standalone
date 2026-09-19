@@ -15,7 +15,7 @@ class AdaptiveLearningServiceTest {
     @Test fun recordsAnonymizedFeedbackAndAdvancesEvolution() {
         val store = MemoryStore()
         val service = AdaptiveLearningService(LearningEvolutionStore(store), store)
-        val state = service.record(LearningFeedbackSignal("Meine Telefonnummer ist 0123456789, das war hilfreich.", true))
+        val state = service.record(LearningLearningFeedbackSignal("Meine Telefonnummer ist 0123456789, das war hilfreich.", true))
         assertEquals(1, state.acceptedSignals)
         assertEquals(DevelopmentStage.FOUNDATION, state.stage)
         assertEquals("meine telefonnummer ist [redacted], das war hilfreich.", store.get("lia.learning.feedback.v1")!!.toString(Charsets.UTF_8))
@@ -24,18 +24,18 @@ class AdaptiveLearningServiceTest {
     @Test fun ignoresDuplicatesAndOversizedFeedback() {
         val store = MemoryStore()
         val service = AdaptiveLearningService(LearningEvolutionStore(store), store)
-        service.record(FeedbackSignal("Hilfreich", true))
-        val duplicate = service.record(FeedbackSignal("  HILFREICH ", true))
+        service.record(LearningFeedbackSignal("Hilfreich", true))
+        val duplicate = service.record(LearningFeedbackSignal("  HILFREICH ", true))
         assertEquals(1, duplicate.acceptedSignals)
-        val oversized = service.record(FeedbackSignal("x".repeat(501), true))
+        val oversized = service.record(LearningFeedbackSignal("x".repeat(501), true))
         assertEquals(1, oversized.acceptedSignals)
     }
 
     @Test fun resetRemovesHistoryAndEvolution() {
         val store = MemoryStore()
         val service = AdaptiveLearningService(LearningEvolutionStore(store), store)
-        service.record(FeedbackSignal("Gut", true))
+        service.record(LearningFeedbackSignal("Gut", true))
         service.reset()
-        assertEquals(0, service.record(FeedbackSignal("Neu", true)).acceptedSignals)
+        assertEquals(0, service.record(LearningFeedbackSignal("Neu", true)).acceptedSignals)
     }
 }
