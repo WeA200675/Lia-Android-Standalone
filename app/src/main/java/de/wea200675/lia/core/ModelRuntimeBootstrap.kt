@@ -10,6 +10,7 @@ class ModelRuntimeBootstrap(
 ) {
     fun create(): ResilientLocalRuntime {
         val fallback = ResilientLocalRuntime(UnavailableNativeInference())
+        if (!ModelRuntimeAdmission.canStart(ModelStorageReporter.forDirectory(ModelStorageLocator.forContext(context)))) return fallback
         return runCatching {
             val manifest = ModelManifestLoader(context).load()
             LocalRuntimeFactory(modelDirectory).create(manifest)
