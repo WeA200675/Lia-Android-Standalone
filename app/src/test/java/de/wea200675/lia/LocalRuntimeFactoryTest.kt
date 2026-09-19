@@ -60,6 +60,26 @@ class LocalRuntimeFactoryTest {
         }
     }
 
+    @Test fun triesRecoveryWhenVerifiedPrimaryCannotInitialize() {
+        val directory = directoryWith("primary.gguf", "primary")
+        directoryWithIn(directory, "recovery.gguf", "recovery")
+        val loadedIds = mutableListOf<String>()
+        val primary = spec("primary", "primary.gguf", directory)
+        val recovery = spec("recovery", "recovery.gguf", directory)
+        val runtime = LocalRuntimeFactory(directory, nativeFactory = {
+            fakeNative { model ->
+                loadedIds += model.spec.id
+                model.spec.id == "recovery"
+            }
+        }).create(primary, recovery)
+        try {
+            assertTrue(runtime.isReady())
+            assertEquals(listOf("primary", "recovery"), loadedIds)
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
     private fun fakeNative(onLoad: (VerifiedModel) -> Unit) = object : NativeInference {
         override fun load(model: VerifiedModel): Boolean { onLoad(model); return true }
         override fun generate(prompt: String, maxTokens: Int) = Result.success("ok")
@@ -71,5 +91,9 @@ class LocalRuntimeFactoryTest {
 
     private fun directoryWith(name: String, content: String): File = createTempDir("lia-runtime-").apply {
         File(this, name).writeText(content)
+    }
+
+    private fun directoryWithIn(directory: File, name: String, content: String) {
+        File(directory, name).writeText(content)
     }
 }
