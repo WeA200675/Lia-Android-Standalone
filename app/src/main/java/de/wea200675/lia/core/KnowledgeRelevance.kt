@@ -7,7 +7,7 @@ object KnowledgeRelevance {
         "kann","mit","oder","sich","sind","über","und","von","warum","was","wie",
         "wird","wo","wer","wann","wieso","zur","zum","den","dem","der","die"
     )
-    private val tokenPattern = Regex("[\p{L}\p{N}]{4,}")
+    private val tokenPattern = Regex("""[\p{L}\p{N}]{4,}""")
 
     fun accepts(question: String, answer: String): Boolean {
         val questionTerms = terms(question)
