@@ -28,10 +28,12 @@ object DailyTrainingPlanner {
         TrainingFocus.CURIOSITY to "Was möchtest du heute entdecken oder verstehen?"
     )
 
-    fun forDate(date: LocalDate): DailyTrainingPlan {
+    fun forDate(date: LocalDate): DailyTrainingPlan = forDate(date, DevelopmentStage.FOUNDATION)
+
+    fun forDate(date: LocalDate, stage: DevelopmentStage): DailyTrainingPlan {
         val prompts = (0 until 25).map { index ->
-            val (focus, text) = seeds[(index + date.dayOfYear) % seeds.size]
-            TrainingPrompt(date.toString() + "-" + index, focus, text)
+            val (focus, text) = seeds[(index + date.dayOfYear + stage.ordinal) % seeds.size]
+            TrainingPrompt(date.toString() + "-" + stage.name + "-" + index, focus, text)
         }
         return DailyTrainingPlan(date, prompts)
     }
