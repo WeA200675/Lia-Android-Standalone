@@ -18,6 +18,8 @@ import de.wea200675.lia.core.KnowledgeSessionRuntime
 import de.wea200675.lia.core.ConfirmedKnowledgeRepository
 import de.wea200675.lia.core.ConfirmedKnowledgeIntegrityRuntime
 import de.wea200675.lia.core.KnowledgeIntegrityState
+import de.wea200675.lia.core.ModelStorageLocator
+import de.wea200675.lia.core.ModelStorageReporter
 import de.wea200675.lia.core.AdminDestructiveAction
 import de.wea200675.lia.core.AdminDestructiveActionGuard
 
