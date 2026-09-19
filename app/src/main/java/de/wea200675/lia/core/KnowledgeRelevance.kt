@@ -1,5 +1,7 @@
 package de.wea200675.lia.core
 
+import java.util.Locale
+
 /** Rejects source snippets that are plainly unrelated to the asked question. */
 object KnowledgeRelevance {
     private val stopWords = setOf(
@@ -22,7 +24,7 @@ object KnowledgeRelevance {
     }
 
     private fun terms(text: String): Set<String> =
-        tokenPattern.findAll(text.lowercase())
+        tokenPattern.findAll(text.lowercase(Locale.ROOT))
             .map { it.value }
             .filterNot { it in stopWords }
             .toSet()
