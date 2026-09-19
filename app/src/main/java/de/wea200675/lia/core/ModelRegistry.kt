@@ -10,6 +10,11 @@ class ModelRegistry(context: Context) {
     fun modelFile(spec: ModelSpec) = File(dir, spec.fileName)
     fun storageUsedBytes() = dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
     fun usesExternalAppStorage() = storage.usesExternalAppStorage
+    fun storageReport(): ModelStorageReport = ModelStorageReporter.forDirectory(storage)
+    fun canAcceptModelBytes(modelBytes: Long): Boolean =
+        ModelStoragePolicy.canAcceptModel(storageReport(), modelBytes)
+    fun storageRejectionReason(modelBytes: Long): String? =
+        ModelStoragePolicy.rejectionReason(storageReport(), modelBytes)
     fun isVerified(spec: ModelSpec) = ModelVerifier.verified(modelFile(spec), spec.sha256)
     fun primaryOrRecovery(primary: ModelSpec, recovery: ModelSpec): ModelSpec? =
         when {
