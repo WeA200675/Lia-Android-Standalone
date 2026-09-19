@@ -18,6 +18,8 @@ import de.wea200675.lia.core.KnowledgeSessionRuntime
 import de.wea200675.lia.core.ConfirmedKnowledgeRepository
 import de.wea200675.lia.core.ConfirmedKnowledgeIntegrityRuntime
 import de.wea200675.lia.core.KnowledgeIntegrityState
+import de.wea200675.lia.core.ModelStorageLocator
+import de.wea200675.lia.core.ModelStorageReporter
 import de.wea200675.lia.core.AdminDestructiveAction
 import de.wea200675.lia.core.AdminDestructiveActionGuard
 
@@ -33,6 +35,8 @@ class AdminActivity : Activity() {
         val secureStore = AndroidSecureStore(this)
         val budgetStore = RestartBudgetStore(secureStore)
         val retainedKnowledge = ConfirmedKnowledgeRepository(secureStore)
+        val modelStorage = ModelStorageLocator.forContext(this)
+        val modelStorageReport = ModelStorageReporter.forDirectory(modelStorage)
         val destructiveGuard = AdminDestructiveActionGuard()
         val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setPadding(32,32,32,32) }
         val title=TextView(this).apply { text="Lia Admin"; textSize=32f; gravity=Gravity.CENTER }
@@ -81,7 +85,9 @@ class AdminActivity : Activity() {
             } else {
                 "Bestätigtes Wissen: Inhalte erst nach PIN-Freigabe sichtbar."
             }
-            knowledgeStatus.text=KnowledgeCoverageReport.adminText() +
+            knowledgeStatus.text="Modellspeicher: ${modelStorageReport.userSummary()}\\n" +
+                "Speicherpfad: ${if (modelStorageReport.usesExternalAppStorage) "erweiterter privater App-Speicher" else "privater interner App-Speicher"}\\n\\n" +
+                KnowledgeCoverageReport.adminText() +
                 "\n\nLaufzeitstatus: ${knowledge.cachedEntries}/${knowledge.cacheCapacity} Wissenseinträge" +
                 "\nQuellen mit Fehlern: ${knowledge.sourcesWithFailures}" +
                 "\nVorübergehend pausiert: ${knowledge.suspendedSources}"
