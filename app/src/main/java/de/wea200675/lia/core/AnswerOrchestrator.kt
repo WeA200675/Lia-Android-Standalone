@@ -86,7 +86,7 @@ class AnswerOrchestrator(
 
         if (localAnswer != null && localAnswer != SafeOfflineRuntime.RESPONSE) {
             return OrchestratedAnswer(
-                text = localAnswer,
+                text = CompanionResponsePolicy.adapt(localAnswer, boundedText),
                 source = AnswerSource.LOCAL_AI,
                 webContextUsed = webContext != null,
                 knowledgeProvenance = webResult?.second
