@@ -121,7 +121,7 @@ class AdminActivity : Activity() {
             }
             refresh()
         }
-        lockNow.setOnClickListener { concealAdminContent?.invoke() }
+        lockNow.setOnClickListener { if (!requireAdmin()) return@setOnClickListener; kiosk.enable(); status.text="Kiosk-Modus wieder aktiviert."; concealAdminContent?.invoke() }
         wifi.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }
         confirm.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; profile.confirmAll(); status.text="Alle Lernpunkte bestätigt."; refresh() }
         clear.setOnClickListener {
