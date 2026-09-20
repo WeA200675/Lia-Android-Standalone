@@ -174,7 +174,7 @@ class AdminActivity : Activity() {
             refresh()
         }
         val scroll=ScrollView(this).apply { addView(box) }
-        setContentView(scroll); refresh()
+        setContentView(scroll); if (intent.getBooleanExtra("admin_authorized", false)) { session.unlock(); setup.isEnabled=false; setupPin.isEnabled=false; setupConfirm.isEnabled=false; pin.isEnabled=false }; refresh()
     }
     override fun onDestroy() {
         sessionHandler.removeCallbacks(expireSession)
