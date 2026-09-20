@@ -82,7 +82,7 @@ class KioskController(
     }
 
     private fun verifyLegacy(pin: String, storedHash: String): Boolean {
-        if (!pin.matches(Regex("""d{6,12}""")) || !storedHash.matches(Regex("[a-f0-9]{64}"))) return false
+        if (!pin.matches(Regex("""\d{6,12}""")) || !storedHash.matches(Regex("[a-f0-9]{64}"))) return false
         val actual = MessageDigest.getInstance("SHA-256")
             .digest(pin.toByteArray(StandardCharsets.UTF_8))
             .joinToString("") { "%02x".format(it) }

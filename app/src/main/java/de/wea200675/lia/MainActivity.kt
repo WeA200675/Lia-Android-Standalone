@@ -83,6 +83,7 @@ class MainActivity : Activity() {
         val reply = TextView(this).apply { textSize = 21f; setPadding(0, 16, 0, 16); gravity = Gravity.CENTER }
         val remember = Button(this).apply { text = "📚 Dieses Wissen merken"; textSize = 18f; isEnabled = false }
         var lastCandidate: ConfirmedKnowledgeCandidate? = null
+        var lastAnswerText = ""
         val question = TextView(this).apply { textSize = 23f; gravity = Gravity.CENTER; setPadding(0, 16, 0, 12) }
         val answer = EditText(this).apply { hint = "Tagesantwort (freiwillig)"; textSize = 20f; minLines = 2 }
         val save = Button(this).apply { text = "💾 Antwort speichern"; textSize = 18f }
@@ -117,8 +118,9 @@ class MainActivity : Activity() {
                 "\n\nℹ Quellen: ${provenance.sourceLabels.joinToString(", ")} · $origin"
             }
             reply.text = result.text + sourceNote
+            lastAnswerText = result.text
             lastCandidate = ConfirmedKnowledgeCandidate.from(questionText, result)
-            remember.isEnabled = lastCandidate != null
+            remember.isEnabled = true
             speaker?.speak(result.text, TextToSpeech.QUEUE_FLUSH, null, "lia-reply")
         }
         fun handleConversation(text: String) {
@@ -141,7 +143,9 @@ class MainActivity : Activity() {
         remember.setOnClickListener {
             val candidate = lastCandidate
             if (candidate == null) {
-                reply.text = "Diese Antwort hat keine überprüfbare Quelle und wird nicht dauerhaft gespeichert."
+                profile.add(LearningItem("personal-" + System.currentTimeMillis(), lastAnswerText))
+                reply.text = "Als persönliche Erinnerung lokal verschlüsselt gespeichert."
+                remember.isEnabled = false
                 return@setOnClickListener
             }
             val saved = confirmedKnowledge.saveConfirmed(candidate.summary, candidate.sourceLabels, candidate.fingerprint)
