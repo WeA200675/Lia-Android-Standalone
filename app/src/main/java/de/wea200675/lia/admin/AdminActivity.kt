@@ -100,7 +100,7 @@ class AdminActivity : Activity() {
             if (kiosk.hasAdminPin()) { status.text="Eine Admin-PIN ist bereits eingerichtet."; return@setOnClickListener }
             val first=setupPin.text.toString(); val second=setupConfirm.text.toString()
             if (first != second) { status.text="Die beiden PIN-Eingaben stimmen nicht überein."; return@setOnClickListener }
-            try { kiosk.setAdminPin(first); setupPin.text.clear(); setupConfirm.text.clear(); status.text="Admin-PIN eingerichtet. Bitte sicher notieren."; refresh() }
+            try { kiosk.setAdminPin(first); setupPin.text.clear(); setupConfirm.text.clear(); session.unlock(); sessionHandler.postDelayed(expireSession, 5 * 60_000L); setup.isEnabled=false; setupPin.isEnabled=false; setupConfirm.isEnabled=false; status.text="Admin-PIN eingerichtet und Admin-Modus geöffnet. WLAN-Einstellungen können jetzt geöffnet werden."; refresh() }
             catch (_: IllegalArgumentException) { status.text="Die PIN muss aus 6 bis 12 Ziffern bestehen."; }
         }
         unlock.setOnClickListener {
