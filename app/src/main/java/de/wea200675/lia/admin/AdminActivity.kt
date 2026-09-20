@@ -41,6 +41,9 @@ class AdminActivity : Activity() {
         val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setPadding(32,32,32,32) }
         val title=TextView(this).apply { text="Lia Admin"; textSize=32f; gravity=Gravity.CENTER }
         val pin=EditText(this).apply { hint="Admin-PIN"; inputType=InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD; textSize=22f }
+        val setupPin=EditText(this).apply { hint="Neue Admin-PIN (6–12 Ziffern)"; inputType=InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD; textSize=20f }
+        val setupConfirm=EditText(this).apply { hint="Neue Admin-PIN wiederholen"; inputType=InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD; textSize=20f }
+        val setup=Button(this).apply { text="Admin-PIN erstmalig einrichten"; textSize=18f }
         val unlock=Button(this).apply { text="Kiosk verlassen"; textSize=20f }
         val lockNow=Button(this).apply { text="Jetzt sperren"; textSize=20f }
         val wifi=Button(this).apply { text="WLAN-Einstellungen öffnen"; textSize=20f }
@@ -93,6 +96,13 @@ class AdminActivity : Activity() {
                 "\nVorübergehend pausiert: ${knowledge.suspendedSources}"
         }
         fun requireAdmin():Boolean { if (session.isUnlocked) return true; concealAdminContent?.invoke(); status.text="Bitte zuerst mit der Admin-PIN freigeben."; return false }
+        setup.setOnClickListener {
+            if (kiosk.hasAdminPin()) { status.text="Eine Admin-PIN ist bereits eingerichtet."; return@setOnClickListener }
+            val first=setupPin.text.toString(); val second=setupConfirm.text.toString()
+            if (first != second) { status.text="Die beiden PIN-Eingaben stimmen nicht überein."; return@setOnClickListener }
+            try { kiosk.setAdminPin(first); setupPin.text.clear(); setupConfirm.text.clear(); status.text="Admin-PIN eingerichtet. Bitte sicher notieren."; refresh() }
+            catch (_: IllegalArgumentException) { status.text="Die PIN muss aus 6 bis 12 Ziffern bestehen."; }
+        }
         unlock.setOnClickListener {
             sessionHandler.removeCallbacks(expireSession)
             session.lock()
@@ -153,7 +163,7 @@ class AdminActivity : Activity() {
             status.text="Wissenspuffer geleert und Quellenfehler zurückgesetzt."
             refresh()
         }
-        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(lockNow); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(knowledgeReset); box.addView(retainedStatus); box.addView(retainedClear); box.addView(status)
+        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(setupPin); box.addView(setupConfirm); box.addView(setup); box.addView(lockNow); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(knowledgeReset); box.addView(retainedStatus); box.addView(retainedClear); box.addView(status)
         concealAdminContent = {
             sessionHandler.removeCallbacks(expireSession)
             session.lock()
