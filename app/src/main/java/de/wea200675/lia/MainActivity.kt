@@ -18,7 +18,9 @@ import android.os.Bundle
 import android.graphics.Color
 import android.view.Gravity
 import android.widget.*
+import android.app.AlertDialog
 import de.wea200675.lia.admin.AdminActivity
+import de.wea200675.lia.admin.KioskController
 import de.wea200675.lia.core.*
 import de.wea200675.lia.background.DailyLearningWorker
 
@@ -185,7 +187,37 @@ class MainActivity : Activity() {
         }
         skip.setOnClickListener { reply.text = "Übersprungen – das ist jederzeit in Ordnung."; next() }
         web.setOnClickListener { webMode = when (webMode) { WebAccessMode.OFFLINE -> WebAccessMode.AUTO_ANONYMIZED_GENERIC; WebAccessMode.AUTO_ANONYMIZED_GENERIC -> WebAccessMode.ASK_BEFORE_PERSONAL; else -> WebAccessMode.OFFLINE }; webStore.set(webMode); web.text = "Internet: $webMode" }
-        admin.setOnClickListener { startActivity(Intent(this, AdminActivity::class.java)) }
+        admin.setOnClickListener {
+            val kiosk = KioskController(this)
+            if (!kiosk.hasAdminPin()) {
+                val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(48, 8, 48, 0) }
+                val first = EditText(this).apply { hint = "Neue Admin-PIN (6–12 Ziffern)"; inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD }
+                val second = EditText(this).apply { hint = "PIN wiederholen"; inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD }
+                layout.addView(first); layout.addView(second)
+                AlertDialog.Builder(this).setTitle("Geschützten Bereich einrichten")
+                    .setMessage("Für WLAN, Kiosk und Wartung wird eine Admin-PIN benötigt.")
+                    .setView(layout).setNegativeButton("Abbrechen", null)
+                    .setPositiveButton("Einrichten") { _, _ ->
+                        try {
+                            if (first.text.toString() != second.text.toString()) throw IllegalArgumentException()
+                            kiosk.setAdminPin(first.text.toString())
+                            startActivity(Intent(this, AdminActivity::class.java).putExtra("admin_authorized", true))
+                        } catch (_: IllegalArgumentException) {
+                            Toast.makeText(this, "Bitte zweimal dieselbe PIN mit 6–12 Ziffern eingeben.", Toast.LENGTH_LONG).show()
+                        }
+                    }.show()
+            } else {
+                val pinInput = EditText(this).apply { hint = "Admin-PIN"; inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD }
+                AlertDialog.Builder(this).setTitle("Geschützter Bereich")
+                    .setMessage("Bitte Admin-PIN eingeben, um Wartung und WLAN zu öffnen.")
+                    .setView(pinInput).setNegativeButton("Abbrechen", null)
+                    .setPositiveButton("Öffnen") { _, _ ->
+                        if (kiosk.disableWithPin(pinInput.text.toString())) {
+                            startActivity(Intent(this, AdminActivity::class.java).putExtra("admin_authorized", true))
+                        } else Toast.makeText(this, "PIN nicht korrekt.", Toast.LENGTH_SHORT).show()
+                    }.show()
+            }
+        }
         root.addView(title); root.addView(status); root.addView(chat, LinearLayout.LayoutParams(-1, -2)); root.addView(listen); root.addView(send); root.addView(reply); root.addView(remember); root.addView(question); root.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); root.addView(save); root.addView(skip); root.addView(web); root.addView(admin); setContentView(root)
     }
 
