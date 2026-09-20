@@ -2,10 +2,8 @@ package de.wea200675.lia
 
 import de.wea200675.lia.core.RoadmapEvidence
 import de.wea200675.lia.core.RoadmapPhase
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import org.junit.Assert.*
+import org.junit.Test
 
 class RoadmapPhaseTest {
     @Test
