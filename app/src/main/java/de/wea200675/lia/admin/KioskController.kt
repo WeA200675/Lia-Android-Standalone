@@ -15,6 +15,7 @@ class KioskController(
     private val limiter = AdminPinAttemptLimiter()
 
     fun isEnabled() = prefs.getBoolean("kiosk_enabled", false)
+    fun hasAdminPin() = prefs.contains(KEY_PIN_VERIFIER) || prefs.contains(KEY_LEGACY_HASH)
 
     fun enable() {
         prefs.edit().putBoolean("kiosk_enabled", true).apply()
@@ -44,7 +45,6 @@ class KioskController(
             .putLong(KEY_LOCKED_UNTIL, 0L)
             .putBoolean("kiosk_enabled", false)
         if (verifier == null) {
-            // Migrate only after successful legacy verification; never weaken or reset an unknown PIN.
             editor.putString(KEY_PIN_VERIFIER, AdminPinVerifier.create(pin)).remove(KEY_LEGACY_HASH)
         }
         check(editor.commit()) { "Admin security state could not be persisted" }
@@ -82,7 +82,7 @@ class KioskController(
     }
 
     private fun verifyLegacy(pin: String, storedHash: String): Boolean {
-        if (!pin.matches(Regex("""\d{6,12}""")) || !storedHash.matches(Regex("[a-f0-9]{64}"))) return false
+        if (!pin.matches(Regex("""d{6,12}""")) || !storedHash.matches(Regex("[a-f0-9]{64}"))) return false
         val actual = MessageDigest.getInstance("SHA-256")
             .digest(pin.toByteArray(StandardCharsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
