@@ -20,3 +20,5 @@ werden nicht simuliert.
 - Keine automatische Freigabe ungeprüfter Modelle oder nativer Bibliotheken.
 - Hardware- und Artefaktphasen bleiben offen, bis ein überprüfbarer Nachweis
   aus CI oder dem realen Samsung-Gerät vorliegt.
+
+Die Nachweise werden in CI erneut geprüft, bevor PR #116 zusammengeführt wird.
