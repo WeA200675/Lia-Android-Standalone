@@ -7,7 +7,11 @@
 - [x] Kiosk-Admin und WLAN-Einstellungen
 - [x] Modellprüfung und Recovery-Vertrag
 - [x] Smalltalk, Wissensimpulse und Interessenfindung
-- [ ] Native Android-LLM-Inferenzadapter
-- [ ] Vollständige App-Integration und APK-Build
-- [ ] Anonymisiertes Internet-Gateway
-- [ ] Reales Samsung-Tablet-Abnahmeprogramm
+- [x] Integrations-Gates für die nächsten Abnahmen
+- [ ] 6. Native Android-LLM-Artefakte
+- [ ] 7. Vollständige App-Integration
+- [ ] 8. Anonymisiertes Wissensgateway
+- [ ] 9. Reales Samsung-Tablet-Abnahmeprogramm
+- [ ] 10. Release- und Recovery-Härtung
+
+Details und überprüfbare Nachweise stehen in [ROADMAP_POINTS_6_10.md](ROADMAP_POINTS_6_10.md).
