@@ -143,7 +143,7 @@ class MainActivity : Activity() {
         remember.setOnClickListener {
             val candidate = lastCandidate
             if (candidate == null) {
-                profile.add(LearningItem("personal-" + System.currentTimeMillis(), lastAnswerText))
+                profile.add(LearningItem("personal-" + System.currentTimeMillis(), lastAnswerText, confirmed = true))
                 reply.text = "Als persönliche Erinnerung lokal verschlüsselt gespeichert."
                 remember.isEnabled = false
                 return@setOnClickListener
