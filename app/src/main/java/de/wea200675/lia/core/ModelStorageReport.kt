@@ -38,11 +38,19 @@ object ModelStorageReporter {
     }
 
     fun forDirectory(choice: ModelStorageChoice): ModelStorageReport {
-        val stat = android.os.StatFs(choice.directory.absolutePath)
-        val blockSize = stat.blockSizeLong
-        val available = stat.availableBlocksLong * blockSize
-        val capacity = stat.blockCountLong * blockSize
-        val used = choice.directory.walkTopDown().filter { it.isFile }.sumOf { it.length() }
-        return from(choice, used, available, capacity)
+        val directory = choice.directory
+        if (!directory.isDirectory && !directory.mkdirs() && !directory.isDirectory) {
+            return from(choice, usedBytes = 0L, availableBytes = 0L, capacityBytes = 0L)
+        }
+        return runCatching {
+            val stat = android.os.StatFs(directory.absolutePath)
+            val blockSize = stat.blockSizeLong
+            val available = stat.availableBlocksLong * blockSize
+            val capacity = stat.blockCountLong * blockSize
+            val used = directory.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+            from(choice, used, available, capacity)
+        }.getOrElse {
+            from(choice, usedBytes = 0L, availableBytes = 0L, capacityBytes = 0L)
+        }
     }
 }
