@@ -16,8 +16,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import android.os.Bundle
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.net.Uri
 import android.view.Gravity
 import android.widget.*
+import android.view.ViewGroup
 import android.app.AlertDialog
 import de.wea200675.lia.admin.AdminActivity
 import de.wea200675.lia.admin.KioskController
@@ -66,12 +69,19 @@ class MainActivity : Activity() {
         val dailyPlan = DailyPlanRepository(TrainingCache(secureStore)).forDate(today)
         val promptProgress = DailyPromptProgress(secureStore)
         index = promptProgress.nextIndex(today, dailyPlan.prompts.size)
-        val root = LinearLayout(this).apply {
+        val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(28, 28, 28, 28)
-            setBackgroundColor(Color.rgb(255, 248, 240))
         }
+        val root = FrameLayout(this)
+        val backgroundUri = getSharedPreferences("lia_appearance", MODE_PRIVATE).getString("background_uri", null)
+        if (backgroundUri != null) try {
+            content.background = ColorDrawable(Color.rgb(255, 248, 240))
+            val image = ImageView(this).apply { setImageURI(Uri.parse(backgroundUri)); alpha = 0.16f; scaleType = ImageView.ScaleType.CENTER_CROP; contentDescription = null }
+            root.addView(image, FrameLayout.LayoutParams(-1, -1))
+        } catch (_: SecurityException) { getSharedPreferences("lia_appearance", MODE_PRIVATE).edit().remove("background_uri").apply() }
+        root.addView(content, FrameLayout.LayoutParams(-1, -1))
         val title = TextView(this).apply { text = "🌼 Lia"; textSize = 42f; gravity = Gravity.CENTER; setTextColor(Color.rgb(230, 120, 70)) }
         val status = TextView(this).apply {
             text = "${if (localRuntime.isNativeReady()) "Lokale KI aktiv" else "Offline-Grundmodus aktiv"}\nCPU: ${cpu.logicalCores} logische Kerne\nRAM: ${(cap.ramMb / 1024)} GB · Speicher frei: ${(cap.freeInternalMb / 1024)} GB · Leistung: $perf\nWissenspuffer: ${cachePlan.profile} (${cachePlan.maxEntries} Einträge)\nModellspeicher: ${modelStorageReport.userSummary()}${if (modelStorageReport.usesExternalAppStorage) " · erweiterter App-Speicher" else ""}"
@@ -226,7 +236,7 @@ class MainActivity : Activity() {
                     }.show()
             }
         }
-        root.addView(title); root.addView(status); root.addView(chat, LinearLayout.LayoutParams(-1, -2)); root.addView(listen); root.addView(send); root.addView(reply); root.addView(remember); root.addView(question); root.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); root.addView(dailyListen); root.addView(save); root.addView(skip); root.addView(web); root.addView(admin); setContentView(root)
+        content.addView(title); content.addView(status); content.addView(chat, LinearLayout.LayoutParams(-1, -2)); content.addView(listen); content.addView(send); content.addView(reply); content.addView(remember); content.addView(question); content.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); content.addView(dailyListen); content.addView(save); content.addView(skip); content.addView(web); content.addView(admin); setContentView(root)
     }
 
     override fun onDestroy() {
