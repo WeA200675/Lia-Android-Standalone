@@ -65,6 +65,8 @@ class AdminActivity : Activity() {
         val retainedStatus=TextView(this).apply { textSize=16f; setPadding(0,20,0,8) }
         val retainedClear=Button(this).apply { text="Dauerhaftes bestätigtes Wissen löschen"; textSize=16f }
         val status=TextView(this).apply { textSize=18f; gravity=Gravity.CENTER }
+        val voiceRate = SeekBar(this).apply { max = 15; progress = (((getSharedPreferences("lia_voice", MODE_PRIVATE).getFloat("speech_rate", 1.0f) - 0.5f) / 0.1f).toInt()).coerceIn(0, 15) }
+        val voiceRateStatus = TextView(this).apply { textSize = 16f; text = "Sprechtempo: %.1fx".format(0.5f + voiceRate.progress * 0.1f) }
         fun refresh(){
             review.text=session.read { profile.confirmed().joinToString("\n"){"✓ ${it.questionId}: ${it.answer}"}.ifBlank{"Keine bestätigten Lernpunkte."} }
                 ?: "Lernprofil: Inhalte erst nach PIN-Freigabe sichtbar."
@@ -163,7 +165,8 @@ class AdminActivity : Activity() {
             status.text="Wissenspuffer geleert und Quellenfehler zurückgesetzt."
             refresh()
         }
-        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(setupPin); box.addView(setupConfirm); box.addView(setup); box.addView(lockNow); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(knowledgeReset); box.addView(retainedStatus); box.addView(retainedClear); box.addView(status)
+        voiceRate.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener { override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) { val rate = 0.5f + value * 0.1f; voiceRateStatus.text = "Sprechtempo: %.1fx".format(rate); getSharedPreferences("lia_voice", MODE_PRIVATE).edit().putFloat("speech_rate", rate).apply() }; override fun onStartTrackingTouch(seekBar: SeekBar?) {}; override fun onStopTrackingTouch(seekBar: SeekBar?) {} })
+        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(setupPin); box.addView(setupConfirm); box.addView(setup); box.addView(lockNow); box.addView(voiceRateStatus); box.addView(voiceRate); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(knowledgeReset); box.addView(retainedStatus); box.addView(retainedClear); box.addView(status)
         concealAdminContent = {
             sessionHandler.removeCallbacks(expireSession)
             session.lock()
