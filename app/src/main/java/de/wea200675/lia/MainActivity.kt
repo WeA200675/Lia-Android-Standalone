@@ -80,9 +80,11 @@ class MainActivity : Activity() {
         val chat = EditText(this).apply { hint = "Schreib mir etwas …"; textSize = 21f; minLines = 2; setPadding(16, 12, 16, 12) }
         val send = Button(this).apply { text = "💬 Mit Lia sprechen"; textSize = 20f }
         val listen = Button(this).apply { text = "🎙️ Mit Lia sprechen"; textSize = 20f }
+        val dailyListen = Button(this).apply { text = "🎙️ Tagesantwort sprechen"; textSize = 18f }
         val reply = TextView(this).apply { textSize = 21f; setPadding(0, 16, 0, 16); gravity = Gravity.CENTER }
         val remember = Button(this).apply { text = "📚 Dieses Wissen merken"; textSize = 18f; isEnabled = false }
         var lastCandidate: ConfirmedKnowledgeCandidate? = null
+        var listeningForDailyAnswer = false
         var lastAnswerText = ""
         val question = TextView(this).apply { textSize = 23f; gravity = Gravity.CENTER; setPadding(0, 16, 0, 12) }
         val answer = EditText(this).apply { hint = "Tagesantwort (freiwillig)"; textSize = 20f; minLines = 2 }
@@ -156,12 +158,14 @@ class MainActivity : Activity() {
             handleConversation(chat.text.toString())
             chat.text.clear()
         }
+        dailyListen.setOnClickListener { listeningForDailyAnswer = true; listen.performClick() }
         listen.setOnClickListener {
             if (!SpeechRecognizer.isRecognitionAvailable(this)) { reply.text = "Spracherkennung ist nicht verfügbar. Du kannst mich jederzeit schreiben."; return@setOnClickListener }
             if (checkSelfPermission("android.permission.RECORD_AUDIO") != PackageManager.PERMISSION_GRANTED) { requestPermissions(arrayOf("android.permission.RECORD_AUDIO"), 42); return@setOnClickListener }
             if (recognizer == null) recognizer = SpeechRecognizer.createSpeechRecognizer(this).apply { setRecognitionListener(object : RecognitionListener {
                 override fun onResults(results: android.os.Bundle) {
                     val t = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+                    if (listeningForDailyAnswer) { answer.setText(t); listeningForDailyAnswer = false; if (t.isNotBlank()) reply.text = "Tagesantwort übernommen." ; return }
                     chat.setText(t)
                     if (t.isBlank()) {
                         presentReply("Ich habe nichts verstanden.")
@@ -222,7 +226,7 @@ class MainActivity : Activity() {
                     }.show()
             }
         }
-        root.addView(title); root.addView(status); root.addView(chat, LinearLayout.LayoutParams(-1, -2)); root.addView(listen); root.addView(send); root.addView(reply); root.addView(remember); root.addView(question); root.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); root.addView(save); root.addView(skip); root.addView(web); root.addView(admin); setContentView(root)
+        root.addView(title); root.addView(status); root.addView(chat, LinearLayout.LayoutParams(-1, -2)); root.addView(listen); root.addView(send); root.addView(reply); root.addView(remember); root.addView(question); root.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); root.addView(dailyListen); root.addView(save); root.addView(skip); root.addView(web); root.addView(admin); setContentView(root)
     }
 
     override fun onDestroy() {
