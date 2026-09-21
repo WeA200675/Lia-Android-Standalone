@@ -7,7 +7,9 @@ import java.util.Base64
 import java.util.Locale
 
 /** Explicitly confirmed, source-bound knowledge; never stores raw questions. */
-data class KnowledgeMaintenanceReport(val keptEntries: Int, val serializedBytes: Int, val maxEntries: Int, val maxBytes: Int)\n\ndata class ConfirmedKnowledge(
+data class KnowledgeMaintenanceReport(val keptEntries: Int, val serializedBytes: Int, val maxEntries: Int, val maxBytes: Int)
+
+data class ConfirmedKnowledge(
     val fingerprint: String, val summary: String, val sourceLabels: List<String>,
     val createdAtEpochMs: Long, val lastUsedAtEpochMs: Long, val useCount: Int, val expiresAtEpochMs: Long
 )
