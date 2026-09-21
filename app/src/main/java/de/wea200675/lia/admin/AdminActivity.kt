@@ -2,6 +2,7 @@ package de.wea200675.lia.admin
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -47,6 +48,7 @@ class AdminActivity : Activity() {
         val unlock=Button(this).apply { text="Kiosk verlassen"; textSize=20f }
         val lockNow=Button(this).apply { text="Jetzt sperren"; textSize=20f }
         val wifi=Button(this).apply { text="WLAN-Einstellungen öffnen"; textSize=20f }
+        val background=Button(this).apply { text="Hintergrundbild auswählen"; textSize=18f }
         val review=TextView(this).apply { textSize=18f; setPadding(0,24,0,12) }
         val confirm=Button(this).apply { text="Alle gespeicherten Punkte bestätigen"; textSize=18f }
         val clear=Button(this).apply { text="Lernprofil vollständig löschen"; textSize=18f }
@@ -125,6 +127,10 @@ class AdminActivity : Activity() {
         }
         lockNow.setOnClickListener { if (!requireAdmin()) return@setOnClickListener; kiosk.enable(); status.text="Kiosk-Modus wieder aktiviert."; concealAdminContent?.invoke() }
         wifi.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }
+        background.setOnClickListener {
+            if (!requireAdmin()) return@setOnClickListener
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type = "image/*"; addCategory(Intent.CATEGORY_OPENABLE); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) }, 77)
+        }
         confirm.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; profile.confirmAll(); status.text="Alle Lernpunkte bestätigt."; refresh() }
         clear.setOnClickListener {
             if(!requireAdmin()) return@setOnClickListener
@@ -166,7 +172,7 @@ class AdminActivity : Activity() {
             refresh()
         }
         voiceRate.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener { override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) { val rate = 0.5f + value * 0.1f; voiceRateStatus.text = "Sprechtempo: %.1fx".format(rate); getSharedPreferences("lia_voice", MODE_PRIVATE).edit().putFloat("speech_rate", rate).apply() }; override fun onStartTrackingTouch(seekBar: SeekBar?) {}; override fun onStopTrackingTouch(seekBar: SeekBar?) {} })
-        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(setupPin); box.addView(setupConfirm); box.addView(setup); box.addView(lockNow); box.addView(voiceRateStatus); box.addView(voiceRate); box.addView(wifi); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(knowledgeReset); box.addView(retainedStatus); box.addView(retainedClear); box.addView(status)
+        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(setupPin); box.addView(setupConfirm); box.addView(setup); box.addView(lockNow); box.addView(voiceRateStatus); box.addView(voiceRate); box.addView(wifi); box.addView(background); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(knowledgeReset); box.addView(retainedStatus); box.addView(retainedClear); box.addView(status)
         concealAdminContent = {
             sessionHandler.removeCallbacks(expireSession)
             session.lock()
@@ -178,6 +184,15 @@ class AdminActivity : Activity() {
         }
         val scroll=ScrollView(this).apply { addView(box) }
         setContentView(scroll); if (intent.getBooleanExtra("admin_authorized", false)) { session.unlock(); setup.isEnabled=false; setupPin.isEnabled=false; setupConfirm.isEnabled=false; pin.isEnabled=false }; refresh()
+    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 77 && resultCode == RESULT_OK) {
+            val uri = data?.data ?: return
+            try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: SecurityException) {}
+            getSharedPreferences("lia_appearance", MODE_PRIVATE).edit().putString("background_uri", uri.toString()).apply()
+            status.text = "Hintergrund gespeichert. Beim nächsten Start wird er dezent angezeigt."
+        }
     }
     override fun onDestroy() {
         sessionHandler.removeCallbacks(expireSession)
