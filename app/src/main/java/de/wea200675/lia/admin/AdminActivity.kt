@@ -191,7 +191,7 @@ class AdminActivity : Activity() {
             val uri = data?.data ?: return
             try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: SecurityException) {}
             getSharedPreferences("lia_appearance", MODE_PRIVATE).edit().putString("background_uri", uri.toString()).apply()
-            status.text = "Hintergrund gespeichert. Beim nächsten Start wird er dezent angezeigt."
+            Toast.makeText(this, "Hintergrund gespeichert. Beim nächsten Start wird er dezent angezeigt.", Toast.LENGTH_LONG).show()
         }
     }
     override fun onDestroy() {
