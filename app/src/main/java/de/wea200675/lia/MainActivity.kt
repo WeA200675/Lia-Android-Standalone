@@ -79,7 +79,7 @@ class MainActivity : Activity() {
         }
         val chat = EditText(this).apply { hint = "Schreib mir etwas …"; textSize = 21f; minLines = 2; setPadding(16, 12, 16, 12) }
         val send = Button(this).apply { text = "💬 Mit Lia sprechen"; textSize = 20f }
-        val listen = Button(this).apply { text = "🎙️ Sprechen"; textSize = 20f }
+        val listen = Button(this).apply { text = "🎙️ Mit Lia sprechen"; textSize = 20f }
         val reply = TextView(this).apply { textSize = 21f; setPadding(0, 16, 0, 16); gravity = Gravity.CENTER }
         val remember = Button(this).apply { text = "📚 Dieses Wissen merken"; textSize = 18f; isEnabled = false }
         var lastCandidate: ConfirmedKnowledgeCandidate? = null
