@@ -15,7 +15,7 @@ class KnowledgeMaintenanceTest {
 
     @Test fun maintenanceIsIdempotentAndReportsBoundedStorage() {
         val repo = ConfirmedKnowledgeRepository(MemoryStore(), maxEntries = 2, clock = { 1_000_000L })
-        assertTrue(repo.saveConfirmed("Kurze bestätigte Information", listOf("Quelle"), "a".repeat(64), ttlMs = 10_000))
+        assertTrue(repo.saveConfirmed("Kurze bestätigte Information", listOf("Quelle"), "a".repeat(64), ttlMs = ConfirmedKnowledgeRepository.MIN_TTL_MS))
         val first = repo.maintain()
         val second = repo.maintain()
         assertEquals(first, second)
