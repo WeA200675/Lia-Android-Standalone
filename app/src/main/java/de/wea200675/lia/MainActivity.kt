@@ -37,7 +37,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         profile = EncryptedLearningProfile(this)
         DailyLearningWorker.schedule(this)
-        speaker = TextToSpeech(this) { if (it == TextToSpeech.SUCCESS) speaker?.language = Locale.GERMAN }
+        speaker = TextToSpeech(this) { if (it == TextToSpeech.SUCCESS) { speaker?.language = Locale.GERMAN; speaker?.setSpeechRate(getSharedPreferences("lia_voice", MODE_PRIVATE).getFloat("speech_rate", 1.0f)) } }
         val router = ConversationRouter()
         val cpu = CpuProfiles.detect()
         val cap = DeviceCapabilityProbe.read(this)
