@@ -120,15 +120,7 @@ class MainActivity : Activity() {
             speaker?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "lia-reply")
         }
         fun presentAnswer(questionText: String, result: OrchestratedAnswer) {
-            val provenance = result.knowledgeProvenance
-            val sourceNote = if (provenance == null) "" else {
-                val origin = when (provenance.origin) {
-                    KnowledgeOrigin.LIVE -> "frisch abgerufen"
-                    KnowledgeOrigin.SESSION_CACHE -> "aus dem flüchtigen Wissenspuffer"
-                    KnowledgeOrigin.CONFIRMED_STORE -> "aus dem bestätigten lokalen Wissen"
-                }
-                "\n\nℹ Quellen: ${provenance.sourceLabels.joinToString(", ")} · $origin"
-            }
+            val sourceNote = KnowledgePresentation.sourceLine(result.knowledgeProvenance)
             reply.text = result.text + sourceNote
             lastAnswerText = result.text
             lastCandidate = ConfirmedKnowledgeCandidate.from(questionText, result)
