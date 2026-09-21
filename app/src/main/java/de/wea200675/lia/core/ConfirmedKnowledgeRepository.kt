@@ -42,7 +42,9 @@ class ConfirmedKnowledgeRepository(
         items += touched; persist(prune(items, now)); return touched
     }
 
-    fun all(): List<ConfirmedKnowledge> = prune(loadInternal(clock()), clock())\n\n    /** Explicit, idempotent cleanup hook for admin maintenance and diagnostics. */
+    fun all(): List<ConfirmedKnowledge> = prune(loadInternal(clock()), clock())
+
+    /** Explicit, idempotent cleanup hook for admin maintenance and diagnostics. */
     fun maintain(): KnowledgeMaintenanceReport {
         val now = clock()
         val kept = prune(loadInternal(now), now)
