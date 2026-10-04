@@ -1,25 +1,34 @@
 # Bauen und Installieren
 
-GitHub Actions verwendet Ubuntu 24.04, Temurin Java 17 und Gradle 8.10. Der Workflow
-führt zuerst die JVM-Unit-Tests und danach den Debug-APK-Build aus. Er lädt das
-APK zusammen mit seiner SHA-256-Prüfsumme als CI-Artefakt hoch.
+## Build
 
-Für die lokale Prüfung werden Java 17 und Gradle 8.10 benötigt:
+Voraussetzungen: Java 17, `curl` oder `wget`, `sha256sum` und `unzip`.
+Der POSIX-Bootstrap `gradlew` lädt die offizielle Gradle-8.10-Distribution und
+prüft sie gegen die veröffentlichte SHA-256-Prüfsumme. Er ist kein offizielles
+Gradle-Wrapper-JAR. Unter Linux/macOS:
 
 ```sh
-gradle testDebugUnitTest
-gradle assembleDebug
+sh ./gradlew testDebugUnitTest
+sh ./gradlew assembleDebug
 sha256sum app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Das Repository enthält derzeit keinen vollständigen Gradle Wrapper. Verwende für
-lokale Builds daher Gradle 8.10 aus einer vertrauenswürdigen Distribution; CI
-bleibt der festgelegte Referenzbuild. Ein Wrapper-JAR wird erst ergänzt, wenn es
-aus der offiziellen Gradle-Distribution bezogen und seine Prüfsumme verifiziert
-werden kann.
+Für die native Bibliothek benötigt der Build Android SDK, NDK `27.2.12479018`
+und CMake `3.22.1`. CMake holt llama.cpp vom festgelegten Commit und baut CPU-
+Bibliotheken für `arm64-v8a` und `x86_64`. CI lädt das Debug-APK zusammen mit
+seiner Prüfsumme hoch.
 
-Das APK ist ein Debug-Build und nicht für eine produktive Verteilung signiert.
-Vor einer Übergabe müssen Kiosk, Sprache, Offline-Fallback, Lernprofil-Löschung,
-Einwilligungs-Widerruf, WLAN-Admin, Backup/Restore und Wiederanlauf auf dem
-Zieltablet manuell geprüft werden. Modelle und native Bibliotheken benötigen
-zusätzlich eine geklärte Lizenz, Herkunft und verifizierte Prüfsumme.
+## Optionales lokales Modell
+
+Das APK enthält keine Gewichte. Verwende den Modellimport in der App und die
+offizielle Datei [Qwen3-0.6B-Q8_0.gguf](https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/blob/main/Qwen3-0.6B-Q8_0.gguf).
+Die App prüft beim Import den im Katalog gepinnten SHA-256; Dateien mit anderem
+Inhalt werden verworfen. Der Download ist manuell und erfolgt nicht durch Lia.
+Lizenz: Apache-2.0. Runtime-Lizenz und vollständige Hinweise stehen in
+[THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
+
+## Abnahmegrenzen
+
+Das APK aus CI ist ein Debug-Build ohne Produktionssignatur. Samsung-Kiosk,
+Audio, thermische Leistung, Backup/Restore und Fehler-Injection müssen auf dem
+Zieltablet geprüft werden. Siehe [Abnahmekriterien](ACCEPTANCE.md).
