@@ -45,7 +45,6 @@ Java_de_wea200675_lia_core_SystemJniInferenceBridge_nativeLoad(
 
     llama_backend_init();
     llama_model_params model_params = llama_model_default_params();
-    model_params.use_mmap = true;
     g_model = llama_model_load_from_file(path.c_str(), model_params);
     if (g_model == nullptr) {
         __android_log_print(ANDROID_LOG_ERROR, kTag, "Model load failed: %s", id.c_str());
