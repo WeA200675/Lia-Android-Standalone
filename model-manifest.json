@@ -1,6 +1,20 @@
 {
   "format": "GGUF",
-  "primary": { "id": "lia-local-3b-q4", "file": "lia-local-3b-q4.gguf", "sha256": "REPLACE_WITH_RELEASE_HASH", "max_ram_mb": 4096 },
-  "recovery": { "id": "lia-recovery-1.5b-q4", "file": "lia-recovery-1.5b-q4.gguf", "sha256": "REPLACE_WITH_RELEASE_HASH", "max_ram_mb": 2300 },
-  "policy": "Never execute a model whose SHA-256 is not verified. Never download automatically."
+  "policy": {
+    "automatic_download": false,
+    "activation_requires_user_import": true,
+    "sha256_required": true
+  },
+  "catalog": [
+    {
+      "id": "qwen3-0.6b-gguf",
+      "publisher": "Qwen",
+      "repository": "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF",
+      "license": "Apache-2.0",
+      "license_url": "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF",
+      "expected_file": "qwen3-0.6b-q8_0.gguf",
+      "expected_sha256": null,
+      "status": "candidate; select exact file and verify publisher digest before import"
+    }
+  ]
 }
