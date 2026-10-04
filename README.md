@@ -8,12 +8,13 @@ Die App enthält eine Offline-Oberfläche, verschlüsselte Erinnerungen, Tagesfr
 Spracheingabe/-ausgabe, ein standardmäßig deaktiviertes Wissensgateway und eine
 lokale Modelllaufzeit mit Text-Fallback. Die native llama.cpp-Runtime ist in den
 Android-Build integriert. Ein offenes Qwen3-Modell kann separat installiert und
-wird nur nach SHA-256-Prüfung aktiviert.
+wird nur nach SHA-256-Prüfung aktiviert. Lernprofil und bestätigtes lokales Wissen lassen sich in eine passwortgeschützte Sicherung exportieren und auf einem anderen Gerät wiederherstellen.
 
 ## Prinzipien
 
 - Persönliche Eingaben bleiben auf dem Gerät.
-- Es gibt keine Cloud-Inferenz und keine automatische Modelldownloads.
+- Es gibt keine Cloud-Inferenz und keine automatischen Modelldownloads.
+- Sicherungen sind mit einer eigenen Passphrase verschlüsselt; Lia speichert oder überträgt diese Passphrase nicht.
 - Webzugriff verlangt eine ausdrückliche, widerrufbare Einwilligung und ist auf
   allgemeine Wissensfragen begrenzt.
 - Bestätigte Erinnerungen werden separat und verschlüsselt gespeichert.
