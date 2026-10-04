@@ -1,10 +1,11 @@
 package de.wea200675.lia.core
 
+import android.content.Context
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Runtime for one explicitly installed model; the normal safe offline runtime remains the fallback. */
+/** Runtime for one explicitly installed model with a safe offline fallback. */
 class LocalModelRuntime(
     private val native: NativeInference = JniNativeInference(SystemJniInferenceBridge()),
     private val fallback: ModelRuntime = SafeOfflineRuntime()
@@ -19,15 +20,15 @@ class LocalModelRuntime(
         return ready
     }
 
-    override suspend fun generate(prompt: String): Result<String> {
-        if (!ready) return fallback.generate(prompt)
+    override suspend fun generate(prompt: String): Result<String> = withContext(Dispatchers.Default) {
+        if (!ready) return@withContext fallback.generate(prompt)
         val boundedPrompt = prompt.take(8000)
         val result = runCatching { native.generate(boundedPrompt, 256) }
             .getOrElse { Result.failure(it) }
-        if (result.isSuccess && !result.getOrNull().isNullOrBlank()) return result
+        if (result.isSuccess && !result.getOrNull().isNullOrBlank()) return@withContext result
         ready = false
         native.close()
-        return fallback.generate(prompt)
+        fallback.generate(prompt)
     }
 
     override fun isReady(): Boolean = ready || fallback.isReady()
@@ -40,14 +41,12 @@ class LocalModelRuntime(
 }
 
 class LocalModelRuntimeFactory(private val modelDirectory: File) {
-    fun create(context: android.content.Context): LocalModelRuntime {
+    fun create(context: Context): LocalModelRuntime {
         val runtime = LocalModelRuntime()
         val entry = ModelCatalog.entries.first()
         val installer = ModelInstaller(context, modelDirectory)
         val model = installer.installedFile(entry) ?: return runtime
-        val sha = context.getSharedPreferences("lia_models", android.content.Context.MODE_PRIVATE)
-            .getString("active_model_sha256", null) ?: return runtime
-        runtime.load(entry.spec(sha), model)
+        runtime.load(entry.spec(), model)
         return runtime
     }
 }
