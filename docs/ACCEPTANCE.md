@@ -1,21 +1,30 @@
 # Abnahmekriterien
 
-## Heute automatisierbar
+## Automatisierbar
 
-- [ ] GitHub Actions führt JVM-Tests vor dem APK-Build aus und veröffentlicht APK plus SHA-256 als ein CI-Artefakt.
-- [ ] Websuche ist standardmäßig aus, wird erst nach verständlicher Einwilligung freigegeben und lässt sich sofort widerrufen.
-- [ ] Netzwerk bleibt auch bei gespeicherter Freigabe für persönliche/unklare Fragen und für nicht unterstützte Webmodi gesperrt.
-- [ ] Verweigerte Mikrofonberechtigung und Spracherkennungsfehler führen sichtbar zur jederzeit verfügbaren Texteingabe.
-- [ ] Admin-Sitzung wird beim Verlassen gesperrt; PIN-Eingabe ist nach Rückkehr wieder verfügbar.
-- [ ] Tagesfragen können übersprungen, lokal gespeichert und über die vorhandene Admin-Funktion gelöscht werden.
+- [ ] GitHub Actions lädt Gradle 8.10 nur nach erfolgreicher offizieller SHA-256-Prüfung.
+- [ ] JVM-Tests laufen vor dem APK-Build.
+- [ ] Android-NDK baut `lia_llama` für arm64-v8a und x86_64.
+- [ ] Debug-APK plus SHA-256 werden als CI-Artefakt veröffentlicht.
+- [ ] Modellimport legt nur eine privat kopierte Datei ab und aktiviert sie nur nach Prüfung des im Katalog gepinnten SHA-256.
+- [ ] Ein fehlendes, falsches oder nicht ladbares Modell lässt die App im lokalen Grundmodus weiterlaufen.
+- [ ] Websuche ist standardmäßig aus, verlangt verständliche Einwilligung und lässt sich widerrufen.
+- [ ] Mikrofonfehler und verweigerte Berechtigung lassen Texteingabe verfügbar.
+- [ ] Admin-Sitzung wird beim Verlassen gesperrt; die PIN-Eingabe ist bei Rückkehr verfügbar.
 - [ ] Lern- und bestätigte Wissensdaten bleiben verschlüsselt, versioniert und löschbar.
 
-## Nur mit echten Artefakten oder Zielgerät abnehmbar
+## Emulator oder echtes Gerät
 
-- [ ] Lokales Modell antwortet ohne Cloud; das ausgelieferte Modell und die native Bibliothek haben geprüfte SHA-256-Werte und eine geklärte freie Lizenz.
-- [ ] Alle logischen CPU-Kerne werden erkannt; thermische Drosselung ist auf dem Gerät beobachtet.
-- [ ] Kiosk, WLAN-Wechsel, Audio und Rotation auf dem Zieltablet geprüft.
-- [ ] Backup/Restore und Wiederanlauf nach Fehler-Injection auf dem Zieltablet durchgeführt.
+- [ ] Qwen3 lädt und antwortet vollständig offline.
+- [ ] Startzeit, Antwortlatenz, Speicherverbrauch, Abbruch und Wiederstart sind akzeptabel.
+- [ ] Kiosk, WLAN-Wechsel, Audio, Rotation und Berechtigungsdialoge funktionieren.
+- [ ] Thermische Drosselung, Absturzverhalten und Wiederanlauf sind beobachtet.
+- [ ] Backup/Restore und Fehler-Injection funktionieren auf dem Zieltablet.
 
-Kein CI- oder JVM-Test ersetzt den realen Tablet-Nachweis. Fehlende Modelle,
-native Bibliotheken, Signaturschlüssel oder Geräte werden nicht simuliert.
+## Release
+
+- [ ] Produktionssignatur, Digest und reproduzierbare Build-Informationen sind veröffentlicht.
+- [ ] Drittanbieterhinweise und Qwen-Modelllizenz bleiben beim jeweiligen Artefakt erhalten.
+
+Ein CI- oder JVM-Test ersetzt keinen realen Tablet-Nachweis. Das Modell wird
+separat bereitgestellt und ist kein Bestandteil des Debug-APK.
