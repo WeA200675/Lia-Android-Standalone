@@ -7,7 +7,7 @@
 - [x] Android-NDK baut `lia_llama` für arm64-v8a und x86_64.
 - [x] Debug-APK plus SHA-256 werden als CI-Artefakt veröffentlicht.
 - [ ] Modellimport legt nur eine privat kopierte Datei ab und aktiviert sie nur nach Prüfung des im Katalog gepinnten SHA-256.
-- [x] Backupformat round-tripped Profil und bestätigtes Wissen; falsche Passphrase, Manipulation und ungültige Nutzdaten werden abgewiesen.
+- [x] Backupcontainer und AES-GCM-Archiv bestehen Byte-Roundtrip-, falsche-Passphrase-, Manipulations- und Formatprüfungen.
 - [ ] Wiederherstellung validiert den gesamten Inhalt vor dem Schreiben; ungültige Sicherungen verändern keine vorhandenen Daten.
 - [ ] Ein fehlendes, falsches oder nicht ladbares Modell lässt die App im lokalen Grundmodus weiterlaufen.
 - [ ] Websuche ist standardmäßig aus, verlangt verständliche Einwilligung und lässt sich widerrufen.
