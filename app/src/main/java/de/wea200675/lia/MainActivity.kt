@@ -337,7 +337,10 @@ class MainActivity : Activity() {
             uiScope.launch {
                 val outcome = withContext(Dispatchers.IO) {
                     runCatching {
-                        val payload = profile.exportBackupSnapshot()
+                        val payload = LearningDataBackup.encode(
+                            profile.exportBackupSnapshot(),
+                            confirmedKnowledge.exportBackupSnapshot()
+                        )
                         val archive = EncryptedBackupArchive.encrypt(payload, passphrase)
                         contentResolver.openOutputStream(uri)?.use { it.write(archive) }
                             ?: error("Die Zieldatei konnte nicht geöffnet werden.")
@@ -358,13 +361,17 @@ class MainActivity : Activity() {
                     val restored = withContext(Dispatchers.IO) {
                         runCatching {
                             val archive = readBackupArchive(uri)
-                            val snapshot = EncryptedBackupArchive.decrypt(archive, passphrase)
-                            check(profile.restoreBackupSnapshot(snapshot)) { "Sicherungsinhalt ist ungültig." }
+                            val payload = EncryptedBackupArchive.decrypt(archive, passphrase)
+                            val snapshot = LearningDataBackup.decode(payload)
+                            check(profile.validateBackupSnapshot(snapshot.profile)) { "Profil in Sicherung ist ungültig." }
+                            check(confirmedKnowledge.validateBackupSnapshot(snapshot.confirmedKnowledge)) { "Wissensdaten in Sicherung sind ungültig." }
+                            check(profile.restoreBackupSnapshot(snapshot.profile)) { "Profil konnte nicht wiederhergestellt werden." }
+                            check(confirmedKnowledge.restoreBackupSnapshot(snapshot.confirmedKnowledge)) { "Wissen konnte nicht wiederhergestellt werden." }
                         }
                     }
                     passphrase.fill('\u0000')
                     Toast.makeText(this@MainActivity,
-                        if (restored.isSuccess) "Lokale Lernantworten und Erinnerungen wiederhergestellt." else "Wiederherstellung fehlgeschlagen. Vorhandene Daten blieben erhalten.",
+                        if (restored.isSuccess) "Lernantworten und bestätigtes Wissen wiederhergestellt." else "Wiederherstellung fehlgeschlagen. Vorhandene Daten blieben erhalten.",
                         Toast.LENGTH_LONG).show()
                 }
             }
