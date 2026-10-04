@@ -86,7 +86,7 @@ Java_de_wea200675_lia_core_SystemJniInferenceBridge_nativeGenerate(
     const int token_count = -llama_tokenize(
         vocab, prompt_text.c_str(), static_cast<int32_t>(prompt_text.size()),
         nullptr, 0, true, true);
-    if (token_count <= 0 || token_count > 4096) return env->NewStringUTF("");
+    if (token_count <= 0 || token_count > 1536) return env->NewStringUTF("");
     std::vector<llama_token> tokens(static_cast<size_t>(token_count));
     const int tokenized = llama_tokenize(
         vocab, prompt_text.c_str(), static_cast<int32_t>(prompt_text.size()),
@@ -114,7 +114,7 @@ Java_de_wea200675_lia_core_SystemJniInferenceBridge_nativeGenerate(
     }
 
     llama_sampler* sampler = llama_sampler_chain_init(llama_sampler_chain_default_params());
-    llama_sampler_chain_add(sampler, llama_sampler_init_greedy());
+    if (sampler == nullptr) { llama_batch_free(batch); return env->NewStringUTF(\"\"); }\n    llama_sampler_chain_add(sampler, llama_sampler_init_greedy());
     while (!failed && generated < bounded_max) {
         const llama_token token = llama_sampler_sample(sampler, g_context, -1);
         if (llama_vocab_is_eog(vocab, token)) break;
