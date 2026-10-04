@@ -3,6 +3,7 @@ package de.wea200675.lia.core
 import android.content.Context
 import android.net.Uri
 import java.io.File
+import java.io.FileOutputStream
 import java.security.MessageDigest
 
 data class ModelImportResult(val file: File?, val sha256: String?, val error: String?) {
@@ -27,7 +28,8 @@ class ModelInstaller(private val context: Context, private val directory: File) 
         return try {
             val digest = MessageDigest.getInstance("SHA-256")
             context.contentResolver.openInputStream(uri)?.use { input ->
-                temporary.outputStream().buffered().use { output ->
+                FileOutputStream(temporary).use { fileOutput ->
+                    val output = fileOutput.buffered()
                     val buffer = ByteArray(1024 * 1024)
                     while (true) {
                         val count = input.read(buffer)
@@ -35,7 +37,7 @@ class ModelInstaller(private val context: Context, private val directory: File) 
                         digest.update(buffer, 0, count)
                         output.write(buffer, 0, count)
                     }
-                    output.fd.sync()
+                    output.flush()\n                    fileOutput.fd.sync()
                 }
             } ?: return ModelImportResult(null, null, "Die ausgewählte Datei ist nicht lesbar.")
             val actual = digest.digest().joinToString("") { "%02x".format(it) }
