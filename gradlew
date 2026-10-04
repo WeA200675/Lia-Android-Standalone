@@ -1,6 +1,5 @@
 #!/bin/sh
-# Minimal, checksum-pinned Gradle bootstrap launcher.
-# For the standard Gradle wrapper, use gradle-wrapper.jar generated from this distribution.
+# Checksum-pinned bootstrap launcher for the official Gradle 8.10 distribution.
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 GRADLE_VERSION=8.10
@@ -20,8 +19,8 @@ if [ ! -x "$DIST_DIR/bin/gradle" ]; then
       exit 1
     fi
   fi
-  ACTUAL=$(sha256sum "$ZIP" | awk '{print $1}')
-  if [ "$ACTUAL" != "$GRADLE_SHA256" ]; then
+  actual=$(sha256sum "$ZIP" | awk '{print $1}')
+  if [ "$actual" != "$GRADLE_SHA256" ]; then
     rm -f "$ZIP"
     echo "Gradle archive checksum mismatch; refusing to execute it." >&2
     exit 1
