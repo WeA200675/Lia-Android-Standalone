@@ -18,7 +18,7 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Install pinned Android NDK
         run: sdkmanager "ndk;27.2.12479018" "cmake;3.22.1"
-      - name: Run JVM unit tests
+      - name: Validate pinned wrapper and run JVM unit tests
         run: ./gradlew testDebugUnitTest --no-daemon
       - name: Build debug APK with native runtime
         run: ./gradlew assembleDebug --no-daemon
