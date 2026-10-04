@@ -72,8 +72,9 @@ class ModelInstaller(private val context: Context, private val directory: File) 
         if (preferences.getString("active_model_id", null) != entry.id) return null
         if (preferences.getString("active_model_file", null) != entry.fileName) return null
         val expected = preferences.getString("active_model_sha256", null) ?: return null
+        if (!expected.equals(entry.sha256, ignoreCase = true)) return null
         val model = File(directory, entry.fileName)
-        return model.takeIf { ModelVerifier.verified(it, expected) }
+        return model.takeIf { ModelVerifier.verified(it, entry.sha256) }
     }
 
     fun remove(entry: ModelCatalogEntry): Boolean {
