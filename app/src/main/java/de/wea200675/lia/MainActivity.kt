@@ -14,6 +14,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import android.os.Bundle
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -32,7 +33,9 @@ class MainActivity : Activity() {
     private lateinit var profile: EncryptedLearningProfile
     private var recognizer: SpeechRecognizer? = null
     private var speaker: TextToSpeech? = null
-    private lateinit var localRuntime: SupervisedLocalRuntime
+    private lateinit var localRuntime: LocalModelRuntime
+    private var modelStatusView: TextView? = null
+    private var pendingModelSha256: String? = null
     private lateinit var answerOrchestrator: AnswerOrchestrator
     private lateinit var confirmedKnowledge: ConfirmedKnowledgeRepository
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -91,6 +94,8 @@ class MainActivity : Activity() {
             text = "${if (localRuntime.isNativeReady()) "Lokale KI aktiv" else "Offline-Grundmodus aktiv"}\nCPU: ${cpu.logicalCores} logische Kerne\nRAM: ${(cap.ramMb / 1024)} GB · Speicher frei: ${(cap.freeInternalMb / 1024)} GB · Leistung: $perf\nWissenspuffer: ${cachePlan.profile} (${cachePlan.maxEntries} Einträge)\nModellspeicher: ${modelStorageReport.userSummary()}${if (modelStorageReport.usesExternalAppStorage) " · erweiterter App-Speicher" else ""}"
             textSize = 18f; gravity = Gravity.CENTER
         }
+        modelStatusView = status
+        val installModel = Button(this).apply { text = "🧠 Lokales Modell installieren"; textSize = 18f }
         val chat = EditText(this).apply { hint = "Schreib mir etwas …"; textSize = 21f; minLines = 2; setPadding(16, 12, 16, 12) }
         val send = Button(this).apply { text = "💬 Mit Lia sprechen"; textSize = 20f }
         val listen = Button(this).apply { text = "🎙️ Mit Lia sprechen"; textSize = 20f }
@@ -160,6 +165,36 @@ class MainActivity : Activity() {
             reply.text = if (saved) "Dieses Wissen wurde lokal verschlüsselt gespeichert." else "Dieses Wissen konnte aus Sicherheitsgründen nicht gespeichert werden."
             if (saved) { lastCandidate = null; remember.isEnabled = false }
         }
+        installModel.setOnClickListener {
+            val entry = ModelCatalog.entries.first()
+            val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(32, 8, 32, 0) }
+            val hash = EditText(this).apply {
+                hint = "SHA-256 der exakt ausgewählten GGUF-Datei"
+                inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                minLines = 2
+            }
+            val details = TextView(this).apply {
+                text = "Quelle: " + entry.sourceUrl + "\nLizenz: " + entry.license + "\nLade die GGUF-Datei manuell herunter und prüfe den Hash aus einer vertrauenswürdigen Veröffentlichung. Lia lädt kein Modell automatisch."
+                textSize = 15f
+            }
+            layout.addView(details)
+            layout.addView(hash)
+            AlertDialog.Builder(this).setTitle(entry.displayName).setView(layout)
+                .setNegativeButton("Abbrechen", null)
+                .setPositiveButton("Datei wählen") { _, _ ->
+                    val digest = hash.text.toString().trim()
+                    if (!digest.matches(Regex("[0-9a-fA-F]{64}"))) {
+                        Toast.makeText(this, "Bitte einen SHA-256 mit 64 Hex-Zeichen eingeben.", Toast.LENGTH_LONG).show()
+                    } else {
+                        pendingModelSha256 = digest
+                        startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "application/octet-stream"
+                        }, 73)
+                    }
+                }.show()
+        }
+
         send.setOnClickListener {
             handleConversation(chat.text.toString())
             chat.text.clear()
@@ -262,7 +297,7 @@ class MainActivity : Activity() {
                     }.show()
             }
         }
-        content.addView(title); content.addView(status); content.addView(chat, LinearLayout.LayoutParams(-1, -2)); content.addView(listen); content.addView(send); content.addView(reply); content.addView(remember); content.addView(question); content.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); content.addView(dailyListen); content.addView(save); content.addView(skip); content.addView(web); content.addView(admin); setContentView(root)
+        content.addView(title); content.addView(status); content.addView(installModel); content.addView(chat, LinearLayout.LayoutParams(-1, -2)); content.addView(listen); content.addView(send); content.addView(reply); content.addView(remember); content.addView(question); content.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); content.addView(dailyListen); content.addView(save); content.addView(skip); content.addView(web); content.addView(admin); setContentView(root)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
