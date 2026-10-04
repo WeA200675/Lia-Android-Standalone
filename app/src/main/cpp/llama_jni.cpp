@@ -77,13 +77,12 @@ Java_de_wea200675_lia_core_SystemJniInferenceBridge_nativeGenerate(
     if (user_text.empty()) return env->NewStringUTF("");
 
     const std::string prompt_text =
-        "<|im_start|>system\\n"
-        "Du bist Lia, eine freundliche, geduldige deutschsprachige Alltagsbegleiterin. "
+        "<|im_start|>system\n"
+        "Antworte klar, kurz und ehrlich. Erfinde keine persönlichen Erinnerungen.\n"
         "Antworte klar, kurz und ehrlich. Erfinde keine persönlichen Erinnerungen.\\n"
-        "<|im_end|>\\n<|im_start|>user\\n" + user_text +
-        "\\n<|im_end|>\\n<|im_start|>assistant\\n/no_think\\n";
+        "<|im_end|>\n<|im_start|>user\n" + user_text +
+        "\n<|im_end|>\n<|im_start|>assistant\n/no_think\n";
     const llama_vocab* vocab = llama_model_get_vocab(g_model);
-    const std::string prompt_text(formatted.data(), static_cast<size_t>(actual));
     const int token_count = -llama_tokenize(
         vocab, prompt_text.c_str(), static_cast<int32_t>(prompt_text.size()),
         nullptr, 0, true, true);
