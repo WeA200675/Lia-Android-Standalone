@@ -19,9 +19,9 @@ jobs:
       - name: Install pinned Android NDK
         run: sdkmanager "ndk;27.2.12479018" "cmake;3.22.1"
       - name: Validate pinned wrapper and run JVM unit tests
-        run: ./gradlew testDebugUnitTest --no-daemon
+        run: sh ./gradlew testDebugUnitTest --no-daemon
       - name: Build debug APK with native runtime
-        run: ./gradlew assembleDebug --no-daemon
+        run: sh ./gradlew assembleDebug --no-daemon
       - name: Generate APK SHA-256
         run: sha256sum app/build/outputs/apk/debug/app-debug.apk | tee app/build/outputs/apk/debug/app-debug.apk.sha256
       - uses: actions/upload-artifact@v4
