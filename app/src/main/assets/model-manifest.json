@@ -7,14 +7,15 @@
   },
   "catalog": [
     {
-      "id": "qwen3-0.6b-gguf",
+      "id": "qwen3-0.6b-q8_0",
       "publisher": "Qwen",
       "repository": "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF",
+      "file": "Qwen3-0.6B-Q8_0.gguf",
+      "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
       "license": "Apache-2.0",
       "license_url": "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF",
-      "expected_file": "qwen3-0.6b-q8_0.gguf",
-      "expected_sha256": null,
-      "status": "candidate; select exact file and verify publisher digest before import"
+      "download_bytes": 670040064,
+      "status": "optional; manually imported, hash-verified, and device acceptance pending"
     }
   ]
 }
