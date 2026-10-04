@@ -13,7 +13,7 @@ class VerifiedModel private constructor(
     }
 }
 
-/** Adapter boundary for a future native Android GGUF engine (LiteRT/llama.cpp JNI). */
+/** Native GGUF inference boundary implemented by the pinned llama.cpp JNI runtime. */
 interface NativeInference {
     fun load(model: VerifiedModel): Boolean
     fun generate(prompt: String, maxTokens: Int = 256): Result<String>
