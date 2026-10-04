@@ -8,14 +8,14 @@ class ModelRuntimeBootstrap(
     private val context: Context,
     private val modelDirectory: File = ModelStorageLocator.forContext(context).directory
 ) {
-    fun create(): ModelRuntime {
+    fun create(): LocalModelRuntime {
         if (!ModelRuntimeAdmission.canStart(ModelStorageReporter.forDirectory(ModelStorageLocator.forContext(context)))) {
-            return SafeOfflineRuntime()
+            return LocalModelRuntime()
         }
         return runCatching {
             LocalModelRuntimeFactory(modelDirectory).create(context)
-        }.getOrElse { SafeOfflineRuntime() }
+        }.getOrElse { LocalModelRuntime() }
     }
 
-    fun createSupervised(): ModelRuntime = create()
+    fun createSupervised(): LocalModelRuntime = create()
 }
