@@ -41,7 +41,6 @@ class ModelInstaller(private val context: Context, private val directory: File) 
                     output.flush()
                     fileOutput.fd.sync()
                 }
-            }
             } ?: return ModelImportResult(null, null, "Die ausgewählte Datei ist nicht lesbar.")
             val actual = digest.digest().joinToString("") { "%02x".format(it) }
             if (!actual.equals(expectedSha256, ignoreCase = true)) {
