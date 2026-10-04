@@ -36,6 +36,8 @@ class MainActivity : Activity() {
     private lateinit var answerOrchestrator: AnswerOrchestrator
     private lateinit var confirmedKnowledge: ConfirmedKnowledgeRepository
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var pendingDailySpeech = false
+    private var permissionFeedback: TextView? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         profile = EncryptedLearningProfile(this)
@@ -50,6 +52,8 @@ class MainActivity : Activity() {
         localRuntime = ModelRuntimeBootstrap(this).createSupervised()
         val webStore = WebModeStore(this)
         var webMode = webStore.get()
+        val consentStore = ConsentStore(this)
+        var webConsent = consentStore.webEnabled()
         val cachePlan = KnowledgeCacheCapacity.recommend(
             ramMb = cap.ramMb.toLong(),
             sourceCount = KnowledgeSourceCatalog.sources.size
@@ -59,7 +63,7 @@ class MainActivity : Activity() {
         answerOrchestrator = AnswerOrchestrator(
             localRuntime,
             SafeWikipediaGateway(
-                enabled = { webMode != WebAccessMode.OFFLINE },
+                enabled = { WebNetworkAdmission.allowed(webMode, webConsent) },
                 cache = KnowledgeSessionRuntime.configureCache(cachePlan.maxEntries),
                 sourceHealth = KnowledgeSessionRuntime.sourceHealth
             ),
@@ -92,9 +96,9 @@ class MainActivity : Activity() {
         val listen = Button(this).apply { text = "🎙️ Mit Lia sprechen"; textSize = 20f }
         val dailyListen = Button(this).apply { text = "🎙️ Tagesantwort sprechen"; textSize = 18f }
         val reply = TextView(this).apply { textSize = 21f; setPadding(0, 16, 0, 16); gravity = Gravity.CENTER }
+        permissionFeedback = reply
         val remember = Button(this).apply { text = "📚 Dieses Wissen merken"; textSize = 18f; isEnabled = false }
         var lastCandidate: ConfirmedKnowledgeCandidate? = null
-        var listeningForDailyAnswer = false
         var lastAnswerText = ""
         val question = TextView(this).apply { textSize = 23f; gravity = Gravity.CENTER; setPadding(0, 16, 0, 12) }
         val answer = EditText(this).apply { hint = "Tagesantwort (freiwillig)"; textSize = 20f; minLines = 2 }
@@ -138,7 +142,7 @@ class MainActivity : Activity() {
                 val prompt = PromptContext.build(
                     userText = boundedText,
                     profile = profile.confirmed(),
-                    onlineAllowed = webMode != WebAccessMode.OFFLINE
+                    onlineAllowed = WebNetworkAdmission.allowed(webMode, webConsent)
                 )
                 val result = answerOrchestrator.answer(boundedText, prompt)
                 presentAnswer(boundedText, result)
@@ -160,14 +164,14 @@ class MainActivity : Activity() {
             handleConversation(chat.text.toString())
             chat.text.clear()
         }
-        dailyListen.setOnClickListener { listeningForDailyAnswer = true; listen.performClick() }
+        dailyListen.setOnClickListener { pendingDailySpeech = true; listen.performClick() }
         listen.setOnClickListener {
-            if (!SpeechRecognizer.isRecognitionAvailable(this)) { reply.text = "Spracherkennung ist nicht verfügbar. Du kannst mich jederzeit schreiben."; return@setOnClickListener }
+            if (!SpeechRecognizer.isRecognitionAvailable(this)) { pendingDailySpeech = false; reply.text = "Spracherkennung ist nicht verfügbar. Du kannst mich jederzeit schreiben."; return@setOnClickListener }
             if (checkSelfPermission("android.permission.RECORD_AUDIO") != PackageManager.PERMISSION_GRANTED) { requestPermissions(arrayOf("android.permission.RECORD_AUDIO"), 42); return@setOnClickListener }
             if (recognizer == null) recognizer = SpeechRecognizer.createSpeechRecognizer(this).apply { setRecognitionListener(object : RecognitionListener {
                 override fun onResults(results: android.os.Bundle) {
                     val t = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
-                    if (listeningForDailyAnswer) { answer.setText(t); listeningForDailyAnswer = false; if (t.isNotBlank()) reply.text = "Tagesantwort übernommen." ; return }
+                    if (pendingDailySpeech) { answer.setText(t); pendingDailySpeech = false; if (t.isNotBlank()) reply.text = "Tagesantwort übernommen." ; return }
                     chat.setText(t)
                     if (t.isBlank()) {
                         presentReply("Ich habe nichts verstanden.")
@@ -175,7 +179,7 @@ class MainActivity : Activity() {
                         handleConversation(t)
                     }
                 }
-                override fun onError(error: Int) { reply.text = "Ich konnte dich gerade nicht verstehen. Bitte versuche es noch einmal oder schreibe mir." }
+                override fun onError(error: Int) { pendingDailySpeech = false; reply.text = "Ich konnte dich gerade nicht verstehen. Bitte versuche es noch einmal oder schreibe mir." }
                 override fun onReadyForSpeech(p: android.os.Bundle?) { reply.text = "Ich höre zu …" }
                 override fun onBeginningOfSpeech() {}
                 override fun onRmsChanged(v: Float) {}
@@ -184,7 +188,12 @@ class MainActivity : Activity() {
                 override fun onPartialResults(b: android.os.Bundle?) {}
                 override fun onEvent(t: Int, b: android.os.Bundle?) {}
             }) }
-            recognizer?.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply { putExtra(RecognizerIntent.EXTRA_LANGUAGE, "de-DE"); putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_PROMPT, "Ich höre zu") })
+            try {
+                recognizer?.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply { putExtra(RecognizerIntent.EXTRA_LANGUAGE, "de-DE"); putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_PROMPT, "Ich höre zu") })
+            } catch (_: SecurityException) {
+                pendingDailySpeech = false
+                reply.text = "Mikrofonzugriff fehlt. Du kannst Lia jederzeit schreiben."
+            }
         }
         save.setOnClickListener {
             if (index >= dailyPlan.prompts.size) return@setOnClickListener
@@ -196,7 +205,32 @@ class MainActivity : Activity() {
             next()
         }
         skip.setOnClickListener { reply.text = "Übersprungen – das ist jederzeit in Ordnung."; next() }
-        web.setOnClickListener { webMode = when (webMode) { WebAccessMode.OFFLINE -> WebAccessMode.AUTO_ANONYMIZED_GENERIC; WebAccessMode.AUTO_ANONYMIZED_GENERIC -> WebAccessMode.ASK_BEFORE_PERSONAL; else -> WebAccessMode.OFFLINE }; webStore.set(webMode); web.text = "Internet: $webMode" }
+        fun refreshWebButton() {
+            web.text = if (WebNetworkAdmission.allowed(webMode, webConsent)) "Internet: anonymisierte Suche EIN" else "Internet: AUS"
+        }
+        refreshWebButton()
+        web.setOnClickListener {
+            if (WebNetworkAdmission.allowed(webMode, webConsent)) {
+                webConsent = false
+                consentStore.setWebEnabled(false)
+                webMode = WebAccessMode.OFFLINE
+                webStore.set(webMode)
+                refreshWebButton()
+            } else {
+                AlertDialog.Builder(this)
+                    .setTitle("Anonymisierte Websuche")
+                    .setMessage("Wenn du zustimmst, darf Lia allgemeine Wissensfragen anonymisiert an geprüfte öffentliche Quellen senden. Persönliche Fragen bleiben auf diesem Gerät. Du kannst die Freigabe jederzeit hier ausschalten.")
+                    .setNegativeButton("Offline bleiben", null)
+                    .setPositiveButton("Anonymisierte Suche erlauben") { _, _ ->
+                        webConsent = true
+                        consentStore.setWebEnabled(true)
+                        webMode = WebAccessMode.AUTO_ANONYMIZED_GENERIC
+                        webStore.set(webMode)
+                        refreshWebButton()
+                    }
+                    .show()
+            }
+        }
         admin.setOnClickListener {
             val kiosk = KioskController(this)
             if (!kiosk.hasAdminPin()) {
@@ -231,7 +265,19 @@ class MainActivity : Activity() {
         content.addView(title); content.addView(status); content.addView(chat, LinearLayout.LayoutParams(-1, -2)); content.addView(listen); content.addView(send); content.addView(reply); content.addView(remember); content.addView(question); content.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); content.addView(dailyListen); content.addView(save); content.addView(skip); content.addView(web); content.addView(admin); setContentView(root)
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != 42) return
+        pendingDailySpeech = false
+        permissionFeedback?.text = if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+            "Mikrofon freigegeben. Tippe zum Sprechen erneut; Texteingabe bleibt verfügbar."
+        } else {
+            "Mikrofonzugriff nicht freigegeben. Du kannst Lia jederzeit schreiben."
+        }
+    }
+
     override fun onDestroy() {
+        permissionFeedback = null
         uiScope.cancel()
         recognizer?.destroy()
         speaker?.shutdown()
