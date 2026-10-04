@@ -12,7 +12,8 @@ data class ModelImportResult(val file: File?, val sha256: String?, val error: St
 
 /** Copies a user-selected model into app-private storage and verifies it before activating it. */
 class ModelInstaller(private val context: Context, private val directory: File) {
-    fun install(uri: Uri, entry: ModelCatalogEntry, expectedSha256: String): ModelImportResult {
+    fun install(uri: Uri, entry: ModelCatalogEntry): ModelImportResult {
+        val expectedSha256 = entry.sha256
         if (!expectedSha256.matches(Regex("[0-9a-fA-F]{64}"))) {
             return ModelImportResult(null, null, "Ein gültiger SHA-256-Wert ist erforderlich.")
         }
