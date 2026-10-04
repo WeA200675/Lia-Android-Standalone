@@ -179,6 +179,7 @@ class AdminActivity : Activity() {
             destructiveGuard.cancel()
             pin.text.clear()
             budgetInput.text.clear()
+            pin.isEnabled = true
             status.text = "Admin-Bereich gesperrt. Bitte erneut mit PIN freigeben."
             refresh()
         }
