@@ -51,7 +51,8 @@ class MainActivity : Activity() {
         val perf = ResourceGovernor(this).level()
         val modelStorage = ModelStorageLocator.forContext(this)
         val modelStorageReport = ModelStorageReporter.forDirectory(modelStorage)
-        localRuntime = ModelRuntimeBootstrap(this).createSupervised()
+        val runtimeBootstrap = ModelRuntimeBootstrap(this)
+        localRuntime = runtimeBootstrap.createSupervised()
         val webStore = WebModeStore(this)
         var webMode = webStore.get()
         val consentStore = ConsentStore(this)
@@ -95,6 +96,7 @@ class MainActivity : Activity() {
         }
         modelStatusView = status
         val installModel = Button(this).apply { text = "🧠 Lokales Modell installieren"; textSize = 18f }
+        val offlineStatus = status.text.toString()
         val chat = EditText(this).apply { hint = "Schreib mir etwas …"; textSize = 21f; minLines = 2; setPadding(16, 12, 16, 12) }
         val send = Button(this).apply { text = "💬 Mit Lia sprechen"; textSize = 20f }
         val listen = Button(this).apply { text = "🎙️ Mit Lia sprechen"; textSize = 20f }
@@ -284,6 +286,10 @@ class MainActivity : Activity() {
             }
         }
         content.addView(title); content.addView(status); content.addView(installModel); content.addView(chat, LinearLayout.LayoutParams(-1, -2)); content.addView(listen); content.addView(send); content.addView(reply); content.addView(remember); content.addView(question); content.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); content.addView(dailyListen); content.addView(save); content.addView(skip); content.addView(web); content.addView(admin); setContentView(root)
+        uiScope.launch {
+            val modelLoaded = runtimeBootstrap.loadInstalled(localRuntime)
+            if (modelLoaded) status.text = "Lokale KI aktiv\n" + offlineStatus.substringAfter('\n')
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
