@@ -27,6 +27,15 @@ Inhalt werden verworfen. Der Download ist manuell und erfolgt nicht durch Lia.
 Lizenz: Apache-2.0. Runtime-Lizenz und vollständige Hinweise stehen in
 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
 
+## Portable Datensicherung
+
+In der App kannst du das Lernprofil und bestätigtes lokales Wissen als
+passwortgeschützte Datei exportieren oder auf einem anderen Gerät
+wiederherstellen. Verwende mindestens 12 Zeichen und bewahre die Passphrase
+getrennt von der Datei auf; sie kann nicht zurückgesetzt werden. Ungültige
+Archive oder eine falsche Passphrase werden abgewiesen. Modellgewichte,
+Geräteschlüssel und Einstellungen sind nicht Teil der Sicherung.
+
 ## Abnahmegrenzen
 
 Das APK aus CI ist ein Debug-Build ohne Produktionssignatur. Samsung-Kiosk,
