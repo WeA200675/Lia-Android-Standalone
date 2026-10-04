@@ -168,7 +168,7 @@ class MainActivity : Activity() {
             val entry = ModelCatalog.entries.first()
             val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(32, 8, 32, 0) }
             val details = TextView(this).apply {
-                text = "Quelle: " + entry.sourceUrl + "\\nLizenz: " + entry.license + "\\nDie Datei wird automatisch gegen diesen SHA-256 geprüft: " + entry.sha256 + "\\nLade genau diese GGUF-Datei manuell herunter. Lia lädt kein Modell automatisch."
+                text = "Quelle: " + entry.sourceUrl + "\nLizenz: " + entry.license + "\nDie Datei wird automatisch gegen diesen SHA-256 geprüft: " + entry.sha256 + "\nLade genau diese GGUF-Datei manuell herunter. Lia lädt kein Modell automatisch."
                 textSize = 15f
             }
             layout.addView(details)
