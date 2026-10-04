@@ -312,7 +312,7 @@ class MainActivity : Activity() {
         modelStatusView?.text = "Modell wird geprüft …"
         uiScope.launch {
             val imported = withContext(Dispatchers.IO) {
-                ModelInstaller(this@MainActivity, directory).install(uri, entry, expectedHash)
+                ModelInstaller(this@MainActivity, directory).install(uri, entry)
             }
             if (!imported.succeeded || imported.file == null || imported.sha256 == null) {
                 modelStatusView?.text = "Offline-Grundmodus aktiv"
@@ -320,7 +320,7 @@ class MainActivity : Activity() {
                 return@launch
             }
             val loaded = withContext(Dispatchers.Default) {
-                localRuntime.load(entry.spec(imported.sha256!!), imported.file!!)
+                localRuntime.load(entry.spec(), imported.file!!)
             }
             modelStatusView?.text = if (loaded) {
                 "Lokale KI aktiv · " + entry.displayName + " · SHA-256 geprüft"
