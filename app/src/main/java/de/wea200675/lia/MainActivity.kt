@@ -305,7 +305,7 @@ class MainActivity : Activity() {
                 ModelInstaller(this@MainActivity, directory).install(uri, entry)
             }
             if (!imported.succeeded || imported.file == null || imported.sha256 == null) {
-                modelStatusView?.text = "Offline-Grundmodus aktiv"
+                modelStatusView?.text = "Offline-Grundmodus aktiv\n" + offlineStatus.substringAfter(10)
                 Toast.makeText(this@MainActivity, imported.error ?: "Modellimport fehlgeschlagen.", Toast.LENGTH_LONG).show()
                 return@launch
             }
@@ -313,9 +313,9 @@ class MainActivity : Activity() {
                 localRuntime.load(entry.spec(), imported.file!!)
             }
             modelStatusView?.text = if (loaded) {
-                "Lokale KI aktiv · " + entry.displayName + " · SHA-256 geprüft"
+                "Lokale KI aktiv · " + entry.displayName + " · SHA-256 geprüft\n" + offlineStatus.substringAfter(10)
             } else {
-                "Modell geprüft, aber Runtime konnte es nicht laden. Offline-Grundmodus aktiv."
+                "Modell geprüft, aber Runtime konnte es nicht laden. Offline-Grundmodus aktiv.\n" + offlineStatus.substringAfter(10)
             }
             Toast.makeText(this@MainActivity,
                 if (loaded) "Lokales Modell geprüft und geladen." else "Modell ist geprüft, konnte aber nicht gestartet werden.",
