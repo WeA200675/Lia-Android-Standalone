@@ -300,6 +300,39 @@ class MainActivity : Activity() {
         content.addView(title); content.addView(status); content.addView(installModel); content.addView(chat, LinearLayout.LayoutParams(-1, -2)); content.addView(listen); content.addView(send); content.addView(reply); content.addView(remember); content.addView(question); content.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); content.addView(dailyListen); content.addView(save); content.addView(skip); content.addView(web); content.addView(admin); setContentView(root)
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != 73) return
+        val uri = data?.data
+        val expectedHash = pendingModelSha256
+        pendingModelSha256 = null
+        if (resultCode != RESULT_OK || uri == null || expectedHash == null) return
+        val entry = ModelCatalog.entries.first()
+        val directory = ModelStorageLocator.forContext(this).directory
+        modelStatusView?.text = "Modell wird geprüft …"
+        uiScope.launch {
+            val imported = withContext(Dispatchers.IO) {
+                ModelInstaller(this@MainActivity, directory).install(uri, entry, expectedHash)
+            }
+            if (!imported.succeeded || imported.file == null || imported.sha256 == null) {
+                modelStatusView?.text = "Offline-Grundmodus aktiv"
+                Toast.makeText(this@MainActivity, imported.error ?: "Modellimport fehlgeschlagen.", Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            val loaded = withContext(Dispatchers.Default) {
+                localRuntime.load(entry.spec(imported.sha256!!), imported.file!!)
+            }
+            modelStatusView?.text = if (loaded) {
+                "Lokale KI aktiv · " + entry.displayName + " · SHA-256 geprüft"
+            } else {
+                "Modell geprüft, aber Runtime konnte es nicht laden. Offline-Grundmodus aktiv."
+            }
+            Toast.makeText(this@MainActivity,
+                if (loaded) "Lokales Modell geprüft und geladen." else "Modell ist geprüft, konnte aber nicht gestartet werden.",
+                Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode != 42) return
