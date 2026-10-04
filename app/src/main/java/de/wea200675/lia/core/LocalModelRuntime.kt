@@ -1,6 +1,8 @@
 package de.wea200675.lia.core
 
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Runtime for one explicitly installed model; the normal safe offline runtime remains the fallback. */
 class LocalModelRuntime(
