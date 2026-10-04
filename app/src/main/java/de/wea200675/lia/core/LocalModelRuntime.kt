@@ -11,8 +11,10 @@ class LocalModelRuntime(
     private val fallback: ModelRuntime = SafeOfflineRuntime()
 ) : ModelRuntime {
     @Volatile private var ready = false
+    @Volatile private var closed = false
 
-    fun load(spec: ModelSpec, file: File): Boolean {
+    @Synchronized fun load(spec: ModelSpec, file: File): Boolean {
+        if (closed) return false
         native.close()
         ready = false
         val verified = VerifiedModel.from(spec, file) ?: return false
@@ -34,18 +36,19 @@ class LocalModelRuntime(
     override fun isReady(): Boolean = ready || fallback.isReady()
     fun isNativeReady(): Boolean = ready
 
-    fun close() {
+    @Synchronized fun close() {
+        closed = true
         native.close()
         ready = false
     }
 }
 
+/** Kept injectable for callers that already hold app-private model storage. */
 class LocalModelRuntimeFactory(private val modelDirectory: File) {
     fun create(context: Context): LocalModelRuntime {
         val runtime = LocalModelRuntime()
         val entry = ModelCatalog.entries.first()
-        val installer = ModelInstaller(context, modelDirectory)
-        val model = installer.installedFile(entry) ?: return runtime
+        val model = ModelInstaller(context, modelDirectory).installedFile(entry) ?: return runtime
         runtime.load(entry.spec(), model)
         return runtime
     }
