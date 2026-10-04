@@ -4,6 +4,9 @@ import android.content.Context
 import android.net.Uri
 import java.io.File
 import java.io.FileOutputStream
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 
 data class ModelImportResult(val file: File?, val sha256: String?, val error: String?) {
@@ -47,13 +50,13 @@ class ModelInstaller(private val context: Context, private val directory: File) 
                 temporary.delete()
                 return ModelImportResult(null, actual, "SHA-256 stimmt nicht mit dem bestätigten Modell-Hash überein.")
             }
-            if (target.exists() && !target.delete()) {
-                temporary.delete()
-                return ModelImportResult(null, actual, "Das vorhandene Modell konnte nicht ersetzt werden.")
-            }
-            if (!temporary.renameTo(target)) {
-                temporary.delete()
-                return ModelImportResult(null, actual, "Das geprüfte Modell konnte nicht aktiviert werden.")
+            try {
+                Files.move(
+                    temporary.toPath(), target.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING
+                )
+            } catch (_: AtomicMoveNotSupportedException) {
+                Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
             }
             context.getSharedPreferences("lia_models", Context.MODE_PRIVATE).edit()
                 .putString("active_model_id", entry.id)
