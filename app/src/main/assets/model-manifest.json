@@ -14,7 +14,6 @@
       "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
       "license": "Apache-2.0",
       "license_url": "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF",
-      "download_bytes": 670040064,
       "status": "optional; manually imported, hash-verified, and device acceptance pending"
     }
   ]
