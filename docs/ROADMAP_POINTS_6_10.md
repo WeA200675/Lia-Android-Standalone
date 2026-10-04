@@ -6,11 +6,11 @@ nicht simuliert.
 
 | Punkt | Inhalt | Implementiert | Noch offen |
 |---|---|---|---|
-| 6 | Lokale Android-KI | llama.cpp aus gepinntem MIT-Quellstand, JNI CPU-Inferenz, Qwen3 GGUF-Katalog mit Apache-2.0, Nutzerimport in App-Speicher und SHA-256-Verifikation | Native CI muss grün sein; Inferenz, Speicher/Hitze und echte Antwort auf Emulator und Zielgerät prüfen |
-| 7 | App-Integration | Modellstatus, Importdialog, nativer Runtime-Pfad, Text-Fallback | CI-/Emulatorlauf, Start/Ladezeit, Lifecycle und Wiederherstellung testen |
+| 6 | Lokale Android-KI | llama.cpp aus gepinntem MIT-Quellstand, JNI CPU-Inferenz, Qwen3 GGUF-Katalog mit Apache-2.0, Nutzerimport in App-Speicher und SHA-256-Verifikation; NDK-Build für beide ABIs in CI #361 grün | Offline-Inferenz, Speicher/Hitze und echte Antwort auf Emulator und Zielgerät prüfen |
+| 7 | App-Integration | Modellstatus, Importdialog, nativer Runtime-Pfad, Text-Fallback; JVM und Debug-APK CI #361 grün | Emulatorlauf, Start/Ladezeit, Lifecycle und Wiederherstellung testen |
 | 8 | Anonymisiertes Wissensgateway | standardmäßig offline; explizite widerrufbare Einwilligung; generische Fragen als einzige Onlinefreigabe | Android-Netzwerkfluss, Quellenprovenienz und Widerruf praktisch abnehmen |
 | 9 | Samsung-Abnahme | nicht begonnen, Zielgerät fehlt | Kiosk/WLAN, Audio, Rotation, Berechtigungsablehnung, Laufzeit und Thermik |
-| 10 | Release- und Recovery-Härtung | CI-Digest für Debug-APK, Open-Source-Lizenzen und passwortgeschützter Export/Wiederherstellung von Lernprofil plus bestätigtem Wissen | CI-Abnahme, Fehler-Injection auf Gerät, reproduzierbarer Release, Signatur und Geräteevidence |
+| 10 | Release- und Recovery-Härtung | CI-Digest für Debug-APK, Open-Source-Lizenzen, passwortgeschützter Export/Wiederherstellung von Lernprofil plus bestätigtem Wissen; Archivtests in CI #361 grün | Fehler-Injection auf Gerät, reproduzierbarer Release, Signatur und Geräteevidence |
 
 ## Lokale KI: Herkunft und Auslieferung
 
