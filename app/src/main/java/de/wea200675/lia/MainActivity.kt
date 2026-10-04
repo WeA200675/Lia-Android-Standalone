@@ -8,6 +8,7 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import java.time.LocalDate
+import java.io.ByteArrayOutputStream
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
@@ -36,6 +37,7 @@ class MainActivity : Activity() {
     private lateinit var localRuntime: LocalModelRuntime
     private var modelStatusView: TextView? = null
     private var offlineStatusText: String = "Offline-Grundmodus aktiv"
+    private var pendingBackupPassphrase: CharArray? = null
     private lateinit var answerOrchestrator: AnswerOrchestrator
     private lateinit var confirmedKnowledge: ConfirmedKnowledgeRepository
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -97,6 +99,8 @@ class MainActivity : Activity() {
         }
         modelStatusView = status
         val installModel = Button(this).apply { text = "🧠 Lokales Modell installieren"; textSize = 18f }
+        val exportBackup = Button(this).apply { text = "🔐 Sicherung exportieren"; textSize = 18f }
+        val importBackup = Button(this).apply { text = "🔓 Sicherung wiederherstellen"; textSize = 18f }
         offlineStatusText = status.text.toString()
         val chat = EditText(this).apply { hint = "Schreib mir etwas …"; textSize = 21f; minLines = 2; setPadding(16, 12, 16, 12) }
         val send = Button(this).apply { text = "💬 Mit Lia sprechen"; textSize = 20f }
@@ -166,6 +170,33 @@ class MainActivity : Activity() {
             val saved = confirmedKnowledge.saveConfirmed(candidate.summary, candidate.sourceLabels, candidate.fingerprint)
             reply.text = if (saved) "Dieses Wissen wurde lokal verschlüsselt gespeichert." else "Dieses Wissen konnte aus Sicherheitsgründen nicht gespeichert werden."
             if (saved) { lastCandidate = null; remember.isEnabled = false }
+        }
+        exportBackup.setOnClickListener {
+            promptBackupPassphrase("Sicherung verschlüsseln") { passphrase ->
+                pendingBackupPassphrase = passphrase
+                try {
+                    startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "application/octet-stream"
+                        putExtra(Intent.EXTRA_TITLE, "Lia-Sicherung.liabkp")
+                    }, 74)
+                } catch (_: Exception) {
+                    clearPendingBackupPassphrase()
+                    Toast.makeText(this, "Dateiauswahl ist nicht verfügbar.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+        importBackup.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Sicherung wiederherstellen")
+                .setMessage("Die Wiederherstellung ersetzt die derzeit gespeicherten lokalen Lernantworten und Erinnerungen. Nur eine gültige Sicherung mit korrekter Passphrase wird übernommen.")
+                .setNegativeButton("Abbrechen", null)
+                .setPositiveButton("Datei wählen") { _, _ ->
+                    startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "application/octet-stream"
+                    }, 75)
+                }.show()
         }
         installModel.setOnClickListener {
             val entry = ModelCatalog.entries.first()
@@ -286,7 +317,7 @@ class MainActivity : Activity() {
                     }.show()
             }
         }
-        content.addView(title); content.addView(status); content.addView(installModel); content.addView(chat, LinearLayout.LayoutParams(-1, -2)); content.addView(listen); content.addView(send); content.addView(reply); content.addView(remember); content.addView(question); content.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); content.addView(dailyListen); content.addView(save); content.addView(skip); content.addView(web); content.addView(admin); setContentView(root)
+        content.addView(title); content.addView(status); content.addView(installModel); content.addView(exportBackup); content.addView(importBackup); content.addView(chat, LinearLayout.LayoutParams(-1, -2)); content.addView(listen); content.addView(send); content.addView(reply); content.addView(remember); content.addView(question); content.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); content.addView(dailyListen); content.addView(save); content.addView(skip); content.addView(web); content.addView(admin); setContentView(root)
         uiScope.launch {
             val modelLoaded = runtimeBootstrap.loadInstalled(localRuntime)
             if (modelLoaded) status.text = "Lokale KI aktiv\n" + offlineStatusText.substringAfter('\n')
@@ -295,6 +326,50 @@ class MainActivity : Activity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 74) {
+            val passphrase = pendingBackupPassphrase
+            pendingBackupPassphrase = null
+            val uri = data?.data
+            if (resultCode != RESULT_OK || uri == null || passphrase == null) {
+                passphrase?.fill('\\u0000')
+                return
+            }
+            uiScope.launch {
+                val outcome = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val payload = profile.exportBackupSnapshot()
+                        val archive = EncryptedBackupArchive.encrypt(payload, passphrase)
+                        contentResolver.openOutputStream(uri)?.use { it.write(archive) }
+                            ?: error("Die Zieldatei konnte nicht geöffnet werden.")
+                    }
+                }
+                passphrase.fill('\\u0000')
+                Toast.makeText(this@MainActivity,
+                    if (outcome.isSuccess) "Verschlüsselte Sicherung gespeichert." else "Sicherung fehlgeschlagen: ${outcome.exceptionOrNull()?.message ?: "unbekannter Fehler"}",
+                    Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+        if (requestCode == 75) {
+            val uri = data?.data
+            if (resultCode != RESULT_OK || uri == null) return
+            promptBackupPassphrase("Sicherung entschlüsseln") { passphrase ->
+                uiScope.launch {
+                    val restored = withContext(Dispatchers.IO) {
+                        runCatching {
+                            val archive = readBackupArchive(uri)
+                            val snapshot = EncryptedBackupArchive.decrypt(archive, passphrase)
+                            check(profile.restoreBackupSnapshot(snapshot)) { "Sicherungsinhalt ist ungültig." }
+                        }
+                    }
+                    passphrase.fill('\\u0000')
+                    Toast.makeText(this@MainActivity,
+                        if (restored.isSuccess) "Lokale Lernantworten und Erinnerungen wiederhergestellt." else "Wiederherstellung fehlgeschlagen. Vorhandene Daten blieben erhalten.",
+                        Toast.LENGTH_LONG).show()
+                }
+            }
+            return
+        }
         if (requestCode != 73) return
         val uri = data?.data
         if (resultCode != RESULT_OK || uri == null) return
@@ -314,13 +389,51 @@ class MainActivity : Activity() {
                 localRuntime.load(entry.spec(), imported.file!!)
             }
             modelStatusView?.text = if (loaded) {
-                "Lokale KI aktiv · " + entry.displayName + " · SHA-256 geprüft\n" + offlineStatus.removePrefix("Offline-Grundmodus aktiv\n")
+                "Lokale KI aktiv · " + entry.displayName + " · SHA-256 geprüft\n" + offlineStatusText.removePrefix("Offline-Grundmodus aktiv\n")
             } else {
-                "Modell geprüft, aber Runtime konnte es nicht laden. Offline-Grundmodus aktiv.\n" + offlineStatus.removePrefix("Offline-Grundmodus aktiv\n")
+                "Modell geprüft, aber Runtime konnte es nicht laden. Offline-Grundmodus aktiv.\n" + offlineStatusText.removePrefix("Offline-Grundmodus aktiv\n")
             }
             Toast.makeText(this@MainActivity,
                 if (loaded) "Lokales Modell geprüft und geladen." else "Modell ist geprüft, konnte aber nicht gestartet werden.",
                 Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun promptBackupPassphrase(title: String, onPassphrase: (CharArray) -> Unit) {
+        val input = EditText(this).apply {
+            hint = "Mindestens 12 Zeichen"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+        AlertDialog.Builder(this).setTitle(title)
+            .setMessage("Diese Passphrase wird zum Ver- und Entschlüsseln verwendet. Lia kann sie nicht zurücksetzen.")
+            .setView(input).setNegativeButton("Abbrechen", null)
+            .setPositiveButton("Weiter") { _, _ ->
+                val passphrase = input.text.toString().toCharArray()
+                if (passphrase.size !in 12..1024) {
+                    passphrase.fill('\\u0000')
+                    Toast.makeText(this, "Die Passphrase muss 12 bis 1024 Zeichen lang sein.", Toast.LENGTH_LONG).show()
+                } else onPassphrase(passphrase)
+            }.show()
+    }
+
+    private fun clearPendingBackupPassphrase() {
+        pendingBackupPassphrase?.fill('\\u0000')
+        pendingBackupPassphrase = null
+    }
+
+    private fun readBackupArchive(uri: Uri): ByteArray {
+        val maxBytes = EncryptedBackupArchive.MAX_PAYLOAD_BYTES + 128
+        val input = contentResolver.openInputStream(uri) ?: error("Die Sicherungsdatei ist nicht lesbar.")
+        input.use { stream ->
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            while (true) {
+                val count = stream.read(buffer)
+                if (count < 0) break
+                require(output.size() + count <= maxBytes) { "Die Sicherungsdatei ist zu groß." }
+                output.write(buffer, 0, count)
+            }
+            return output.toByteArray()
         }
     }
 
@@ -337,6 +450,7 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         permissionFeedback = null
+        clearPendingBackupPassphrase()
         uiScope.cancel()
         recognizer?.destroy()
         speaker?.shutdown()
