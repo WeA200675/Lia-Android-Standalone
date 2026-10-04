@@ -6,11 +6,11 @@ nicht simuliert.
 
 | Punkt | Inhalt | Implementiert | Noch offen |
 |---|---|---|---|
-| 6 | Lokale Android-KI | llama.cpp aus gepinntem MIT-Quellstand, JNI CPU-Inferenz, Qwen3 GGUF-Katalog mit Apache-2.0, Nutzerimport in App-Speicher und SHA-256-Verifikation | NDK-CI muss grün sein; Inferenz, Speicher/Hitze und echte Antwort auf Emulator und Zielgerät prüfen |
+| 6 | Lokale Android-KI | llama.cpp aus gepinntem MIT-Quellstand, JNI CPU-Inferenz, Qwen3 GGUF-Katalog mit Apache-2.0, Nutzerimport in App-Speicher und SHA-256-Verifikation | Native CI muss grün sein; Inferenz, Speicher/Hitze und echte Antwort auf Emulator und Zielgerät prüfen |
 | 7 | App-Integration | Modellstatus, Importdialog, nativer Runtime-Pfad, Text-Fallback | CI-/Emulatorlauf, Start/Ladezeit, Lifecycle und Wiederherstellung testen |
 | 8 | Anonymisiertes Wissensgateway | standardmäßig offline; explizite widerrufbare Einwilligung; generische Fragen als einzige Onlinefreigabe | Android-Netzwerkfluss, Quellenprovenienz und Widerruf praktisch abnehmen |
 | 9 | Samsung-Abnahme | nicht begonnen, Zielgerät fehlt | Kiosk/WLAN, Audio, Rotation, Berechtigungsablehnung, Laufzeit und Thermik |
-| 10 | Release- und Recovery-Härtung | CI-Digest für Debug-APK und Open-Source-Lizenzen | Backup/Restore, Fehler-Injection, reproduzierbarer Release, Signatur und Geräteevidence |
+| 10 | Release- und Recovery-Härtung | CI-Digest für Debug-APK, Open-Source-Lizenzen und passwortgeschützter Export/Wiederherstellung von Lernprofil plus bestätigtem Wissen | CI-Abnahme, Fehler-Injection auf Gerät, reproduzierbarer Release, Signatur und Geräteevidence |
 
 ## Lokale KI: Herkunft und Auslieferung
 
@@ -22,4 +22,4 @@ nicht simuliert.
 - Kein Modellnetzwerkzugriff und kein Cloud-Inferenzpfad. Persönliche Eingaben laufen durch lokale Inferenz oder den lokalen Grundmodus.
 - Drittanbieterhinweise liegen in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) und im App-Asset.
 
-Jeder CI-Lauf prüft JVM-Tests und den für den jeweiligen Stand konfigurierten Android-Build.
+Das Backupformat verwendet PBKDF2-HMAC-SHA256 und AES-256-GCM; es ist begrenzt, versioniert und akzeptiert Passphrasen von mindestens 12 Zeichen. Inhalte werden erst nach erfolgreicher Authentifizierung und vollständiger Validierung wiederhergestellt. Das Backup enthält Lernprofil und bestätigtes Wissen, nicht die separat heruntergeladenen Modellgewichte.\n\nJeder CI-Lauf prüft JVM-Tests und den für den jeweiligen Stand konfigurierten Android-Build.
