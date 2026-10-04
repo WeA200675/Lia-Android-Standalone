@@ -1,24 +1,23 @@
 # Roadmap-Punkte 6–10
 
-Diese fünf Phasen bilden den nächsten Integrationsblock. Die App darf eine Phase
-erst als abgeschlossen anzeigen, wenn die zugehörigen Nachweise wirklich
-vorliegen. Fehlende native Bibliotheken, GGUF-Dateien oder Samsung-Hardware
-werden nicht simuliert.
+Diese Phasen werden nur dann als abgeschlossen markiert, wenn die genannten
+Nachweise vorliegen. Fehlende native Bibliotheken, GGUF-Dateien, freie Lizenzen
+oder Samsung-Hardware werden nicht simuliert.
 
-| Punkt | Inhalt | Nachweis |
-|---|---|---|
-| 6 | Native Android-LLM-Artefakte | signierte ABI-Artefakte, Modellmanifest, SHA-256-Prüfung und Starttest |
-| 7 | Vollständige App-Integration | Main-/Admin-Flows, Lernfeedback, Offline-Fallback und verschlüsselte Zustände |
-| 8 | Anonymisiertes Wissensgateway | Datenminimierung, Einwilligungs-/Policy-Prüfung, Quellenprovenienz und Offline-Kaskade |
-| 9 | Samsung-Abnahme | Android-16-Gerätetest, Kiosk-/WLAN-Konfiguration, Audio, Rotation und Wiederanlauf |
-| 10 | Release- und Recovery-Härtung | reproduzierbarer APK-Build, Signatur-/Digest-Prüfung, Backup/Restore und Fehler-Injektion |
+| Punkt | Inhalt | Heutiger Stand | Abnahmekriterium |
+|---|---|---|---|
+| 6 | Native Android-LLM-Artefakte | **BLOCKED: Artefakte fehlen** | frei lizenzierte Modelle und ABI-Bibliotheken, Herkunft, echte SHA-256-Werte, Verifikation und Starttest |
+| 7 | Vollständige App-Integration | **IN ARBEIT** | Main-/Admin-Flows, Lernfeedback, Offline-Fallback und verschlüsselte Zustände auf Emulator und Gerät geprüft |
+| 8 | Anonymisiertes Wissensgateway | **IN ARBEIT** | standardmäßig offline; explizite widerrufbare Einwilligung, fail-closed Datenminimierung, Quellenprovenienz und Offline-Kaskade |
+| 9 | Samsung-Abnahme | **BLOCKED: Zielgerät fehlt** | Android-16-Gerätetest für Kiosk/WLAN, Audio, Rotation, Berechtigungsablehnung und Wiederanlauf |
+| 10 | Release- und Recovery-Härtung | **TEILWEISE UMGESETZT** | CI-Tests, Debug-APK-Digest, reproduzierbarer Build, Backup/Restore und Fehler-Injection; Produktionssignatur bleibt separat |
 
 ## Sicherheitsregeln
 
-- Kein Netzwerkzugriff ohne die bestehende Policy-Entscheidung.
-- Keine persönlichen Daten im anonymisierten Gateway.
+- Kein Netzwerkzugriff ohne Policy-Freigabe **und** gespeicherte Einwilligung.
+- Nur allgemeine, anonymisierte Fragen dürfen die Online-Kaskade erreichen.
 - Keine automatische Freigabe ungeprüfter Modelle oder nativer Bibliotheken.
-- Hardware- und Artefaktphasen bleiben offen, bis ein überprüfbarer Nachweis
-  aus CI oder dem realen Samsung-Gerät vorliegt.
+- Modellgewichte, native Binaries und Schlüssel werden nicht eingecheckt, solange Lizenz und Herkunft nicht geklärt sind.
+- Geräte- und Releasephasen bleiben offen, bis ein überprüfbarer Nachweis aus CI oder dem realen Zieltablet vorliegt.
 
-Die Nachweise werden in CI erneut geprüft, bevor PR #116 zusammengeführt wird.
+Jeder CI-Lauf testet den Quellstand des jeweiligen Pushes oder Pull Requests.
