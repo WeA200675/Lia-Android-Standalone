@@ -76,23 +76,12 @@ Java_de_wea200675_lia_core_SystemJniInferenceBridge_nativeGenerate(
     const std::string user_text = from_jstring(env, prompt);
     if (user_text.empty()) return env->NewStringUTF("");
 
-    const std::string system_text =
+    const std::string prompt_text =
+        "<|im_start|>system\\n"
         "Du bist Lia, eine freundliche, geduldige deutschsprachige Alltagsbegleiterin. "
-        "Antworte klar, kurz und ehrlich. Erfinde keine persönlichen Erinnerungen.";
-    const llama_chat_message messages[] = {
-        {"system", system_text.c_str()},
-        {"user", user_text.c_str()}
-    };
-    const char* chat_template = llama_model_chat_template(g_model, nullptr);
-    int32_t needed = llama_chat_apply_template(
-        chat_template, messages, 2, true, nullptr, 0);
-    if (needed <= 0 || needed > 32768) return env->NewStringUTF("");
-    std::vector<char> formatted(static_cast<size_t>(needed) + 1);
-    const int32_t actual = llama_chat_apply_template(
-        chat_template, messages, 2, true, formatted.data(),
-        static_cast<int32_t>(formatted.size()));
-    if (actual < 0 || actual > needed) return env->NewStringUTF("");
-
+        "Antworte klar, kurz und ehrlich. Erfinde keine persönlichen Erinnerungen.\\n"
+        "<|im_end|>\\n<|im_start|>user\\n" + user_text +
+        "\\n<|im_end|>\\n<|im_start|>assistant\\n/no_think\\n";
     const llama_vocab* vocab = llama_model_get_vocab(g_model);
     const std::string prompt_text(formatted.data(), static_cast<size_t>(actual));
     const int token_count = -llama_tokenize(
