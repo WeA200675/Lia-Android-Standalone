@@ -35,7 +35,6 @@ class MainActivity : Activity() {
     private var speaker: TextToSpeech? = null
     private lateinit var localRuntime: LocalModelRuntime
     private var modelStatusView: TextView? = null
-    private var pendingModelSha256: String? = null
     private lateinit var answerOrchestrator: AnswerOrchestrator
     private lateinit var confirmedKnowledge: ConfirmedKnowledgeRepository
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -168,33 +167,20 @@ class MainActivity : Activity() {
         installModel.setOnClickListener {
             val entry = ModelCatalog.entries.first()
             val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(32, 8, 32, 0) }
-            val hash = EditText(this).apply {
-                hint = "SHA-256 der exakt ausgewählten GGUF-Datei"
-                inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-                minLines = 2
-            }
             val details = TextView(this).apply {
-                text = "Quelle: " + entry.sourceUrl + "\nLizenz: " + entry.license + "\nLade die GGUF-Datei manuell herunter und prüfe den Hash aus einer vertrauenswürdigen Veröffentlichung. Lia lädt kein Modell automatisch."
+                text = "Quelle: " + entry.sourceUrl + "\\nLizenz: " + entry.license + "\\nDie Datei wird automatisch gegen diesen SHA-256 geprüft: " + entry.sha256 + "\\nLade genau diese GGUF-Datei manuell herunter. Lia lädt kein Modell automatisch."
                 textSize = 15f
             }
             layout.addView(details)
-            layout.addView(hash)
             AlertDialog.Builder(this).setTitle(entry.displayName).setView(layout)
                 .setNegativeButton("Abbrechen", null)
                 .setPositiveButton("Datei wählen") { _, _ ->
-                    val digest = hash.text.toString().trim()
-                    if (!digest.matches(Regex("[0-9a-fA-F]{64}"))) {
-                        Toast.makeText(this, "Bitte einen SHA-256 mit 64 Hex-Zeichen eingeben.", Toast.LENGTH_LONG).show()
-                    } else {
-                        pendingModelSha256 = digest
-                        startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                            addCategory(Intent.CATEGORY_OPENABLE)
-                            type = "application/octet-stream"
-                        }, 73)
-                    }
+                    startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "application/octet-stream"
+                    }, 73)
                 }.show()
         }
-
         send.setOnClickListener {
             handleConversation(chat.text.toString())
             chat.text.clear()
@@ -304,9 +290,7 @@ class MainActivity : Activity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode != 73) return
         val uri = data?.data
-        val expectedHash = pendingModelSha256
-        pendingModelSha256 = null
-        if (resultCode != RESULT_OK || uri == null || expectedHash == null) return
+        if (resultCode != RESULT_OK || uri == null) return
         val entry = ModelCatalog.entries.first()
         val directory = ModelStorageLocator.forContext(this).directory
         modelStatusView?.text = "Modell wird geprüft …"
