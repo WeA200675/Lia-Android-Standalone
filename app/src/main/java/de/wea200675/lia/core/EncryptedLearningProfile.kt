@@ -13,7 +13,7 @@ class EncryptedLearningProfile(context: Context) {
     fun confirm(index: Int) { val all = readAll().toMutableList(); if (index in all.indices) { all[index] = all[index].copy(confirmed = true); writeAll(all) } }
     fun confirmed(): List<LearningItem> = readAll().filter { it.confirmed }
     fun confirmAll() { writeAll(readAll().map { it.copy(confirmed = true) }) }
-    fun deleteAll() { prefs.edit().clear().apply() }
+    fun deleteAll() { check(prefs.edit().clear().commit()) { "Learning profile could not be deleted" } }
 
     /** Exports a validated plaintext snapshot; callers must encrypt it before writing anywhere. */
     fun exportBackupSnapshot(): ByteArray {
@@ -25,16 +25,19 @@ class EncryptedLearningProfile(context: Context) {
             .toString().toByteArray(Charsets.UTF_8)
     }
 
-    /** Validates the entire archive payload before replacing the currently stored profile. */
-    fun restoreBackupSnapshot(snapshot: ByteArray): Boolean = try {
+    fun validateBackupSnapshot(snapshot: ByteArray): Boolean = runCatching {
         require(snapshot.size <= 8 * 1024 * 1024)
         val root = JSONObject(String(snapshot, Charsets.UTF_8))
         require(root.getInt("version") == 1)
-        val items = decodeItems(root.getJSONArray("items"))
-        writeAll(items)
-        true
-    } catch (_: Exception) {
-        false
+        decodeItems(root.getJSONArray("items"))
+    }.isSuccess
+
+    /** Validates the entire archive payload before replacing the currently stored profile. */
+    fun restoreBackupSnapshot(snapshot: ByteArray): Boolean {
+        if (!validateBackupSnapshot(snapshot)) return false
+        val root = JSONObject(String(snapshot, Charsets.UTF_8))
+        writeAll(decodeItems(root.getJSONArray("items")))
+        return true
     }
 
     private fun decodeItems(array: JSONArray): List<LearningItem> {
@@ -69,6 +72,6 @@ class EncryptedLearningProfile(context: Context) {
         val a = JSONArray()
         items.forEach { item -> a.put(JSONObject().apply { put("q", item.questionId); put("a", item.answer); put("c", item.confirmed); put("t", item.createdAt) }) }
         val enc = Base64.encodeToString(crypto.encrypt(a.toString().toByteArray(Charsets.UTF_8)), Base64.NO_WRAP)
-        prefs.edit().putString("payload", enc).apply()
+        check(prefs.edit().putString("payload", enc).commit()) { "Learning profile could not be persisted" }
     }
 }
