@@ -331,7 +331,7 @@ class MainActivity : Activity() {
             pendingBackupPassphrase = null
             val uri = data?.data
             if (resultCode != RESULT_OK || uri == null || passphrase == null) {
-                passphrase?.fill('\\u0000')
+                passphrase?.fill('\u0000')
                 return
             }
             uiScope.launch {
@@ -343,7 +343,7 @@ class MainActivity : Activity() {
                             ?: error("Die Zieldatei konnte nicht geöffnet werden.")
                     }
                 }
-                passphrase.fill('\\u0000')
+                passphrase.fill('\u0000')
                 Toast.makeText(this@MainActivity,
                     if (outcome.isSuccess) "Verschlüsselte Sicherung gespeichert." else "Sicherung fehlgeschlagen: ${outcome.exceptionOrNull()?.message ?: "unbekannter Fehler"}",
                     Toast.LENGTH_LONG).show()
@@ -362,7 +362,7 @@ class MainActivity : Activity() {
                             check(profile.restoreBackupSnapshot(snapshot)) { "Sicherungsinhalt ist ungültig." }
                         }
                     }
-                    passphrase.fill('\\u0000')
+                    passphrase.fill('\u0000')
                     Toast.makeText(this@MainActivity,
                         if (restored.isSuccess) "Lokale Lernantworten und Erinnerungen wiederhergestellt." else "Wiederherstellung fehlgeschlagen. Vorhandene Daten blieben erhalten.",
                         Toast.LENGTH_LONG).show()
@@ -410,14 +410,14 @@ class MainActivity : Activity() {
             .setPositiveButton("Weiter") { _, _ ->
                 val passphrase = input.text.toString().toCharArray()
                 if (passphrase.size !in 12..1024) {
-                    passphrase.fill('\\u0000')
+                    passphrase.fill('\u0000')
                     Toast.makeText(this, "Die Passphrase muss 12 bis 1024 Zeichen lang sein.", Toast.LENGTH_LONG).show()
                 } else onPassphrase(passphrase)
             }.show()
     }
 
     private fun clearPendingBackupPassphrase() {
-        pendingBackupPassphrase?.fill('\\u0000')
+        pendingBackupPassphrase?.fill('\u0000')
         pendingBackupPassphrase = null
     }
 
