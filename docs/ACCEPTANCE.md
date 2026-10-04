@@ -15,7 +15,9 @@
 - [ ] Admin-Sitzung wird beim Verlassen gesperrt; die PIN-Eingabe ist bei Rückkehr verfügbar.
 - [ ] Lern- und bestätigte Wissensdaten bleiben verschlüsselt, versioniert und löschbar.
 
-CI-Nachweis: [Android build #361](https://github.com/WeA200675/Lia-Android-Standalone/actions/runs/37226647705), Head `a91e8017abf8076bd398dd302ae30f2ce7cf7cd5`. APK-SHA-256: `539607eabc1a68d28c17c6a59da4800f9b762533e0b00ff2d111a43cd7d6920b`.\n\n## Emulator oder echtes Gerät\n
+CI-Nachweis: [Android build #361](https://github.com/WeA200675/Lia-Android-Standalone/actions/runs/37226647705), Head `a91e8017abf8076bd398dd302ae30f2ce7cf7cd5`. APK-SHA-256: `539607eabc1a68d28c17c6a59da4800f9b762533e0b00ff2d111a43cd7d6920b`.
+
+## Emulator oder echtes Gerät\n
 - [ ] Qwen3 lädt und antwortet vollständig offline.
 - [ ] Startzeit, Antwortlatenz, Speicherverbrauch, Abbruch und Wiederstart sind akzeptabel.
 - [ ] Kiosk, WLAN-Wechsel, Audio, Rotation und Berechtigungsdialoge funktionieren.
