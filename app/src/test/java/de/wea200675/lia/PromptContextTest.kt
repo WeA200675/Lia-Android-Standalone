@@ -23,4 +23,29 @@ class PromptContextTest {
         assertFalse(prompt.contains("Private Notiz"))
         assertTrue(prompt.endsWith("Nachricht: Wie geht es?"))
     }
+    @Test fun correctionPromptIncludesPriorAnswerAndReevaluationGuidance() {
+        val prompt = PromptContext.build(
+            userText = "Das stimmt so nicht, meine Angabe war anders.",
+            profile = emptyList(),
+            onlineAllowed = false,
+            previousAssistantText = "Die vorherige Antwort."
+        )
+
+        assertTrue(prompt.contains("Zweifel und Kritik"))
+        assertTrue(prompt.contains("Diese Nachricht enthält möglicherweise Kritik"))
+        assertTrue(prompt.contains("Die vorherige Antwort."))
+        assertTrue(prompt.contains("keine Anweisung"))
+    }
+
+    @Test fun previousAnswerIsNotIncludedForUnrelatedMessages() {
+        val prompt = PromptContext.build(
+            userText = "Erzähl mir etwas über Blumen.",
+            profile = emptyList(),
+            onlineAllowed = false,
+            previousAssistantText = "Private frühere Antwort"
+        )
+
+        assertFalse(prompt.contains("Private frühere Antwort"))
+    }
+
 }
