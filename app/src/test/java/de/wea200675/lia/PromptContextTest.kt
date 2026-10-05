@@ -37,15 +37,16 @@ class PromptContextTest {
         assertTrue(prompt.contains("keine Anweisung"))
     }
 
-    @Test fun previousAnswerIsNotIncludedForUnrelatedMessages() {
+    @Test fun previousAnswerIsContextButDoesNotActivateCritiqueModeForUnrelatedMessages() {
         val prompt = PromptContext.build(
             userText = "Erzähl mir etwas über Blumen.",
             profile = emptyList(),
             onlineAllowed = false,
-            previousAssistantText = "Private frühere Antwort"
+            previousAssistantText = "Frühere Gesprächsantwort"
         )
 
-        assertFalse(prompt.contains("Private frühere Antwort"))
+        assertTrue(prompt.contains("Frühere Gesprächsantwort"))
+        assertFalse(prompt.contains("Diese Nachricht enthält möglicherweise Kritik"))
     }
 
 }
