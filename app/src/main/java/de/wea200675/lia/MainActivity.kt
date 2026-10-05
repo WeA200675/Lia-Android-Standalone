@@ -45,6 +45,10 @@ class MainActivity : Activity() {
     private var permissionFeedback: TextView? = null
     private lateinit var backupRestoreCoordinator: LearningDataRestoreCoordinator
     private var backupRecoveryHealthy = true
+    private var exportBackupButton: Button? = null
+    private var importBackupButton: Button? = null
+    private var rememberKnowledgeButton: Button? = null
+    private var dailySaveButton: Button? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         profile = EncryptedLearningProfile(this)
@@ -120,6 +124,8 @@ class MainActivity : Activity() {
         val installModel = Button(this).apply { text = "🧠 Lokales Modell installieren"; textSize = 18f }
         val exportBackup = Button(this).apply { text = "🔐 Sicherung exportieren"; textSize = 18f }
         val importBackup = Button(this).apply { text = "🔓 Sicherung wiederherstellen"; textSize = 18f }
+        exportBackupButton = exportBackup
+        importBackupButton = importBackup
         offlineStatusText = status.text.toString()
         val chat = EditText(this).apply { hint = "Schreib mir etwas …"; textSize = 21f; minLines = 2; setPadding(16, 12, 16, 12) }
         val send = Button(this).apply { text = "💬 Mit Lia sprechen"; textSize = 20f }
@@ -128,6 +134,7 @@ class MainActivity : Activity() {
         val reply = TextView(this).apply { textSize = 21f; setPadding(0, 16, 0, 16); gravity = Gravity.CENTER }
         permissionFeedback = reply
         val remember = Button(this).apply { text = "📚 Dieses Wissen merken"; textSize = 18f; isEnabled = false }
+        rememberKnowledgeButton = remember
         val feedback = Button(this).apply { text = "Antwort bewerten"; textSize = 18f; isEnabled = false }
         val rememberAction = ConfirmedKnowledgeMemoryAction(confirmedKnowledge)
         var lastCandidate: ConfirmedKnowledgeCandidate? = null
@@ -135,6 +142,7 @@ class MainActivity : Activity() {
         val question = TextView(this).apply { textSize = 23f; gravity = Gravity.CENTER; setPadding(0, 16, 0, 12) }
         val answer = EditText(this).apply { hint = "Tagesantwort (freiwillig)"; textSize = 20f; minLines = 2 }
         val save = Button(this).apply { text = "💾 Antwort speichern"; textSize = 18f }
+        dailySaveButton = save
         val skip = Button(this).apply { text = "➡️ Später beantworten"; textSize = 18f }
         val web = Button(this).apply { text = "Internet: $webMode"; textSize = 16f }
         val admin = Button(this).apply { text = "Wartung / WLAN"; textSize = 16f }
@@ -439,10 +447,10 @@ class MainActivity : Activity() {
                         else -> "Wiederherstellung fehlgeschlagen; bitte Sicherung und Speicher prüfen."
                     }
                     if (!backupRecoveryHealthy) {
-                        exportBackup.isEnabled = false
-                        importBackup.isEnabled = false
-                        remember.isEnabled = false
-                        save.isEnabled = false
+                        exportBackupButton?.isEnabled = false
+                        importBackupButton?.isEnabled = false
+                        rememberKnowledgeButton?.isEnabled = false
+                        dailySaveButton?.isEnabled = false
                     }
                     Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
                 }

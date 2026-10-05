@@ -12,6 +12,8 @@ import android.text.InputType
 import android.view.Gravity
 import android.widget.*
 import de.wea200675.lia.core.AndroidSecureStore
+import de.wea200675.lia.core.AdaptiveLearningService
+import de.wea200675.lia.core.LearningEvolutionStore
 import de.wea200675.lia.core.EncryptedLearningProfile
 import de.wea200675.lia.core.RestartBudgetStore
 import de.wea200675.lia.core.KnowledgeCoverageReport
@@ -37,6 +39,22 @@ class AdminActivity : Activity() {
         val budgetStore = RestartBudgetStore(secureStore)
         val retainedKnowledge = ConfirmedKnowledgeRepository(secureStore)
         val adaptiveLearning = AdaptiveLearningService(LearningEvolutionStore(secureStore), secureStore)
+        val backupRestoreCoordinator = LearningDataRestoreCoordinator(
+            secureStore,
+            object : LearningDataBackupParticipant {
+                override fun exportBackupSnapshot() = profile.exportBackupSnapshot()
+                override fun validateBackupSnapshot(snapshot: ByteArray) = profile.validateBackupSnapshot(snapshot)
+                override fun restoreBackupSnapshot(snapshot: ByteArray) = profile.restoreBackupSnapshot(snapshot)
+            },
+            object : LearningDataBackupParticipant {
+                override fun exportBackupSnapshot() = retainedKnowledge.exportBackupSnapshot()
+                override fun validateBackupSnapshot(snapshot: ByteArray) = retainedKnowledge.validateBackupSnapshot(snapshot)
+                override fun restoreBackupSnapshot(snapshot: ByteArray) = retainedKnowledge.restoreBackupSnapshot(snapshot)
+            }
+        )
+        val backupRecoveryHealthy = runCatching {
+            backupRestoreCoordinator.recoverPending() != LearningDataRestoreStatus.RECOVERY_REQUIRED
+        }.getOrDefault(false)
         val modelStorage = ModelStorageLocator.forContext(this)
         val modelStorageReport = ModelStorageReporter.forDirectory(modelStorage)
         val destructiveGuard = AdminDestructiveActionGuard()
@@ -71,12 +89,14 @@ class AdminActivity : Activity() {
         val voiceRate = SeekBar(this).apply { max = 15; progress = (((getSharedPreferences("lia_voice", MODE_PRIVATE).getFloat("speech_rate", 1.0f) - 0.5f) / 0.1f).toInt()).coerceIn(0, 15) }
         val voiceRateStatus = TextView(this).apply { textSize = 16f; text = "Sprechtempo: %.1fx".format(0.5f + voiceRate.progress * 0.1f) }
         fun refresh(){
-            review.text=session.read { profile.confirmed().joinToString("\n"){"✓ ${it.questionId}: ${it.answer}"}.ifBlank{"Keine bestätigten Lernpunkte."} }
+            review.text=if (!backupRecoveryHealthy) {
+                "Lernprofil gesperrt: automatische Wiederherstellung steht aus."
+            } else session.read { profile.confirmed().joinToString("\n"){"✓ ${it.questionId}: ${it.answer}"}.ifBlank{"Keine bestätigten Lernpunkte."} }
                 ?: "Lernprofil: Inhalte erst nach PIN-Freigabe sichtbar."
             budgetStatus.text="KI-Selbstheilung: maximal ${budgetStore.load()} Neustarts pro Lauf"
             val knowledge=KnowledgeSessionRuntime.snapshot()
             val retained=try {
-                session.read { retainedKnowledge.all() } ?: emptyList()
+                if (!backupRecoveryHealthy) emptyList() else session.read { retainedKnowledge.all() } ?: emptyList()
             } catch (_: SecurityException) {
                 ConfirmedKnowledgeIntegrityRuntime.recordSecurityFailure()
                 emptyList()
@@ -101,6 +121,14 @@ class AdminActivity : Activity() {
                 "\nVorübergehend pausiert: ${knowledge.suspendedSources}"
         }
         fun requireAdmin():Boolean { if (session.isUnlocked) return true; concealAdminContent?.invoke(); status.text="Bitte zuerst mit der Admin-PIN freigeben."; return false }
+        fun requireLearningData():Boolean {
+            if (!requireAdmin()) return false
+            if (!backupRecoveryHealthy) {
+                status.text="Lerninhalte sind bis zur erfolgreichen automatischen Wiederherstellung gesperrt."
+                return false
+            }
+            return true
+        }
         setup.setOnClickListener {
             if (kiosk.hasAdminPin()) { status.text="Eine Admin-PIN ist bereits eingerichtet."; return@setOnClickListener }
             val first=setupPin.text.toString(); val second=setupConfirm.text.toString()
@@ -132,9 +160,9 @@ class AdminActivity : Activity() {
             if (!requireAdmin()) return@setOnClickListener
             startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type = "image/*"; addCategory(Intent.CATEGORY_OPENABLE); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) }, 77)
         }
-        confirm.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; profile.confirmAll(); status.text="Alle Lernpunkte bestätigt."; refresh() }
+        confirm.setOnClickListener { if(!requireLearningData()) return@setOnClickListener; profile.confirmAll(); status.text="Alle Lernpunkte bestätigt."; refresh() }
         clear.setOnClickListener {
-            if(!requireAdmin()) return@setOnClickListener
+            if(!requireLearningData()) return@setOnClickListener
             if(!destructiveGuard.confirm(AdminDestructiveAction.DELETE_LEARNING_PROFILE)) {
                 status.text="Lernprofil wirklich löschen? Bitte dieselbe Taste innerhalb von 30 Sekunden erneut drücken."
                 return@setOnClickListener
@@ -157,7 +185,7 @@ class AdminActivity : Activity() {
             status.text="Restart-Budget auf den sicheren Standard 3 zurückgesetzt."; refresh()
         }
         retainedClear.setOnClickListener {
-            if(!requireAdmin()) return@setOnClickListener
+            if(!requireLearningData()) return@setOnClickListener
             if(!destructiveGuard.confirm(AdminDestructiveAction.DELETE_CONFIRMED_KNOWLEDGE)) {
                 status.text="Bestätigtes Wissen wirklich löschen? Bitte dieselbe Taste innerhalb von 30 Sekunden erneut drücken."
                 return@setOnClickListener
