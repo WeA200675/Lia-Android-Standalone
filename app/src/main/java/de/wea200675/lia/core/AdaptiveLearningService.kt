@@ -48,7 +48,7 @@ class AdaptiveLearningService(
             ?.lines()?.filter { it.isNotBlank() }?.takeLast(MAX_HISTORY) ?: emptyList()
 
     private fun normalize(value: String): String =
-        Anonymizer.redact(value).trim().lowercase().replace(Regex("\\s+"), " ")
+        Anonymizer.redact(value.trim().lowercase()).trim().replace(Regex("\\s+"), " ")
 
     companion object {
         const val MAX_HISTORY = 100
