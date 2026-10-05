@@ -98,8 +98,15 @@ class AnswerOrchestrator(
         }
 
         if (webContext != null) {
+            val citedFeedbackText = when {
+                ResponseBehavior.isCritiqueOrCorrection(boundedText) ->
+                    "Danke, ich prüfe den Hinweis anhand der verfügbaren Quelle. $webContext"
+                ResponseBehavior.asksForCertainty(boundedText) ->
+                    "Eine verfügbare Quelle dazu nennt: $webContext"
+                else -> webContext
+            }
             return OrchestratedAnswer(
-                text = webContext,
+                text = citedFeedbackText,
                 source = if (retainedResult != null) AnswerSource.CONFIRMED_KNOWLEDGE else AnswerSource.OFFLINE_FALLBACK,
                 webContextUsed = true,
                 knowledgeProvenance = webResult?.second
