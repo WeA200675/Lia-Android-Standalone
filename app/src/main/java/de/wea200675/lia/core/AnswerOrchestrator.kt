@@ -21,7 +21,11 @@ class AnswerOrchestrator(
     private val router: ConversationRouter = ConversationRouter(),
     private val confirmedKnowledge: ConfirmedKnowledgeRepository? = null
 ) {
-    suspend fun answer(\n        userText: String,\n        prompt: String,\n        previousAssistantText: String? = null\n    ): OrchestratedAnswer {
+    suspend fun answer(
+        userText: String,
+        prompt: String,
+        previousAssistantText: String? = null
+    ): OrchestratedAnswer {
         val boundedText = userText.trim().take(2000)
         if (SafetyPolicy.requiresHumanHelp(boundedText)) {
             return OrchestratedAnswer(SafetyPolicy.responseForRisk(), AnswerSource.SAFETY)
