@@ -11,6 +11,7 @@ class ResponseBehaviorTest {
     @Test fun recognizesCorrectionsWithoutTreatingEveryQuestionAsCriticism() {
         assertTrue(ResponseBehavior.isCritiqueOrCorrection("Das stimmt so nicht; prüfe es bitte."))
         assertTrue(ResponseBehavior.isCritiqueOrCorrection("Du liegst daneben."))
+        assertTrue(ResponseBehavior.isCritiqueOrCorrection("Deine Antwort ist nicht korrekt."))
         assertFalse(ResponseBehavior.isCritiqueOrCorrection("Was weißt du über Blumen?"))
     }
 
