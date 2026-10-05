@@ -14,6 +14,9 @@ import android.widget.*
 import de.wea200675.lia.core.AndroidSecureStore
 import de.wea200675.lia.core.AdaptiveLearningService
 import de.wea200675.lia.core.LearningEvolutionStore
+import de.wea200675.lia.core.LearningDataBackupParticipant
+import de.wea200675.lia.core.LearningDataRestoreCoordinator
+import de.wea200675.lia.core.LearningDataRestoreStatus
 import de.wea200675.lia.core.EncryptedLearningProfile
 import de.wea200675.lia.core.RestartBudgetStore
 import de.wea200675.lia.core.KnowledgeCoverageReport
