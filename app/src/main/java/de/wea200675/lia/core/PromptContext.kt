@@ -20,7 +20,7 @@ object PromptContext {
                 "Gestehe einen konkreten Fehler ein und korrigiere ihn. Übernimm die Kritik nicht blind; wenn der Hinweis unklar oder unbelegt ist, frage nach und erkläre sachlich, was du nicht bestätigen kannst."
         } else ""
         val certaintyGuidance = if (ResponseBehavior.asksForCertainty(userText)) {
-            "\nDie Nutzerin fragt nach Sicherheit oder Belegen: sage ausdrücklich, wie sicher du bist, worauf das beruht und was offen bleibt. Erfinde keine Quelle und behaupte keine Gewissheit ohne ausreichende Grundlage."
+            "\nDu fragst nach Sicherheit oder Belegen: sage ausdrücklich, wie sicher du bist, worauf das beruht und was offen bleibt. Erfinde keine Quelle und behaupte keine Gewissheit ohne ausreichende Grundlage."
         } else ""
         return "Du bist Lia, geduldig und klar. Modus: " + mode + ".\n" +
             "Sicherheitsregeln: keine Diagnosen, keine erfundenen Notfälle, bei Gefahr an Vertrauensperson/Notruf verweisen.\n" +
