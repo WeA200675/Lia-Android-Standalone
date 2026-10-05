@@ -3,11 +3,11 @@ package de.wea200675.lia.core
 /** Explicit response rules shared by prompt construction and the offline fallback. */
 object ResponseBehavior {
     private val critiquePattern = Regex(
-        """\b(das stimmt nicht|das stimmt so nicht|das ist falsch|du liegst falsch|du hast unrecht|du irrst dich|korrektur|kritik|fehler in deiner antwort|deine antwort ist falsch)\b""",
+        """\b(das stimmt( so)? nicht|stimmt( so)? nicht|das ist (nicht richtig|falsch)|du liegst (falsch|daneben)|du hast unrecht|du irrst dich|korrektur|kritik|fehler in deiner antwort|deine antwort ist falsch|das kann nicht stimmen)\b""",
         RegexOption.IGNORE_CASE
     )
     private val certaintyPattern = Regex(
-        """\b(bist du sicher|wie sicher|stimmt das wirklich|weißt du das sicher|weisst du das sicher|beleg(e|en)? das|quelle(n)? dafür|wie zuverlässig)\b""",
+        """\b(bist du (dir )?sicher|wie sicher|stimmt das wirklich|weißt du das sicher|weisst du das sicher|kannst du das belegen|beleg(e|en)? das|welche quelle(n)?( dafür)?|wie zuverlässig)\b""",
         RegexOption.IGNORE_CASE
     )
 
