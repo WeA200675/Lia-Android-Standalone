@@ -149,13 +149,17 @@ class MainActivity : Activity() {
                 return
             }
             reply.text = "Ich denke kurz nach …"
+            val previousAnswer = lastAnswerText
             uiScope.launch {
                 val prompt = PromptContext.build(
                     userText = boundedText,
                     profile = profile.confirmed(),
-                    onlineAllowed = WebNetworkAdmission.allowed(webMode, webConsent)
+                    onlineAllowed = WebNetworkAdmission.allowed(webMode, webConsent),
+                    previousAssistantText = previousAnswer
                 )
-                val result = answerOrchestrator.answer(boundedText, prompt)
+                val result = answerOrchestrator.answer(
+                    boundedText, prompt, previousAssistantText = previousAnswer
+                )
                 presentAnswer(boundedText, result)
             }
         }
