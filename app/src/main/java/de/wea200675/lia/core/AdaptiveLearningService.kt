@@ -28,6 +28,16 @@ class AdaptiveLearningService(
         return next
     }
 
+    /** Explicitly user-approved, anonymized feedback for cautious future response review. */
+    fun recentFeedback(limit: Int = 3): List<String> {
+        if (limit <= 0) return emptyList()
+        return runCatching {
+            history()
+                .mapNotNull(UntrustedKnowledgeBoundary::sanitize)
+                .takeLast(limit.coerceAtMost(MAX_PROMPT_FEEDBACK))
+        }.getOrDefault(emptyList())
+    }
+
     fun reset() {
         secureStore.delete(historyKey)
         evolutionStore.reset()
@@ -42,5 +52,6 @@ class AdaptiveLearningService(
 
     companion object {
         const val MAX_HISTORY = 100
+        const val MAX_PROMPT_FEEDBACK = 5
     }
 }

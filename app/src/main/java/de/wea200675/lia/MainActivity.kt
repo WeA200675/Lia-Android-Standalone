@@ -43,6 +43,8 @@ class MainActivity : Activity() {
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var pendingDailySpeech = false
     private var permissionFeedback: TextView? = null
+    private lateinit var backupRestoreCoordinator: LearningDataRestoreCoordinator
+    private var backupRecoveryHealthy = true
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         profile = EncryptedLearningProfile(this)
@@ -66,6 +68,23 @@ class MainActivity : Activity() {
         )
         val secureStore = AndroidSecureStore(this)
         confirmedKnowledge = ConfirmedKnowledgeRepository(secureStore)
+        val adaptiveLearning = AdaptiveLearningService(LearningEvolutionStore(secureStore), secureStore)
+        backupRestoreCoordinator = LearningDataRestoreCoordinator(
+            secureStore,
+            object : LearningDataBackupParticipant {
+                override fun exportBackupSnapshot() = profile.exportBackupSnapshot()
+                override fun validateBackupSnapshot(snapshot: ByteArray) = profile.validateBackupSnapshot(snapshot)
+                override fun restoreBackupSnapshot(snapshot: ByteArray) = profile.restoreBackupSnapshot(snapshot)
+            },
+            object : LearningDataBackupParticipant {
+                override fun exportBackupSnapshot() = confirmedKnowledge.exportBackupSnapshot()
+                override fun validateBackupSnapshot(snapshot: ByteArray) = confirmedKnowledge.validateBackupSnapshot(snapshot)
+                override fun restoreBackupSnapshot(snapshot: ByteArray) = confirmedKnowledge.restoreBackupSnapshot(snapshot)
+            }
+        )
+        backupRecoveryHealthy = runCatching {
+            backupRestoreCoordinator.recoverPending() != LearningDataRestoreStatus.RECOVERY_REQUIRED
+        }.getOrDefault(false)
         answerOrchestrator = AnswerOrchestrator(
             localRuntime,
             SafeWikipediaGateway(
@@ -109,6 +128,8 @@ class MainActivity : Activity() {
         val reply = TextView(this).apply { textSize = 21f; setPadding(0, 16, 0, 16); gravity = Gravity.CENTER }
         permissionFeedback = reply
         val remember = Button(this).apply { text = "📚 Dieses Wissen merken"; textSize = 18f; isEnabled = false }
+        val feedback = Button(this).apply { text = "Antwort bewerten"; textSize = 18f; isEnabled = false }
+        val rememberAction = ConfirmedKnowledgeMemoryAction(confirmedKnowledge)
         var lastCandidate: ConfirmedKnowledgeCandidate? = null
         var lastAnswerText = ""
         val question = TextView(this).apply { textSize = 23f; gravity = Gravity.CENTER; setPadding(0, 16, 0, 12) }
@@ -121,7 +142,7 @@ class MainActivity : Activity() {
             val complete = index >= dailyPlan.prompts.size
             question.text = if (complete) "🌷 Für heute sind alle freiwilligen Impulse geschafft." else dailyPlan.prompts[index].prompt
             answer.isEnabled = !complete
-            save.isEnabled = !complete
+            save.isEnabled = !complete && backupRecoveryHealthy
             skip.isEnabled = !complete
         }
         fun next() {
@@ -139,7 +160,8 @@ class MainActivity : Activity() {
             reply.text = result.text + sourceNote
             lastAnswerText = result.text
             lastCandidate = ConfirmedKnowledgeCandidate.from(questionText, result)
-            remember.isEnabled = true
+            remember.isEnabled = lastCandidate != null && backupRecoveryHealthy
+            feedback.isEnabled = backupRecoveryHealthy
             speaker?.speak(result.text, TextToSpeech.QUEUE_FLUSH, null, "lia-reply")
         }
         fun handleConversation(text: String) {
@@ -150,12 +172,16 @@ class MainActivity : Activity() {
             }
             reply.text = "Ich denke kurz nach …"
             val previousAnswer = lastAnswerText
+            lastCandidate = null
+            remember.isEnabled = false
+            feedback.isEnabled = false
             uiScope.launch {
                 val prompt = PromptContext.build(
                     userText = boundedText,
-                    profile = profile.confirmed(),
+                    profile = if (backupRecoveryHealthy) profile.confirmed() else emptyList(),
                     onlineAllowed = WebNetworkAdmission.allowed(webMode, webConsent),
-                    previousAssistantText = previousAnswer
+                    previousAssistantText = previousAnswer,
+                    recentFeedback = adaptiveLearning.recentFeedback()
                 )
                 val result = answerOrchestrator.answer(
                     boundedText, prompt, previousAssistantText = previousAnswer
@@ -165,15 +191,42 @@ class MainActivity : Activity() {
         }
         remember.setOnClickListener {
             val candidate = lastCandidate
-            if (candidate == null) {
-                profile.add(LearningItem("personal-" + System.currentTimeMillis(), lastAnswerText, confirmed = true))
-                reply.text = "Als persönliche Erinnerung lokal verschlüsselt gespeichert."
+            val saved = rememberAction.save(candidate)
+            reply.text = if (saved) {
+                lastCandidate = null
                 remember.isEnabled = false
-                return@setOnClickListener
+                "Dieses belegte Wissen wurde lokal verschlüsselt gespeichert."
+            } else {
+                remember.isEnabled = false
+                "Diese Antwort hat keine bestätigte, nachvollziehbare Quelle und wurde nicht gespeichert."
             }
-            val saved = confirmedKnowledge.saveConfirmed(candidate.summary, candidate.sourceLabels, candidate.fingerprint)
-            reply.text = if (saved) "Dieses Wissen wurde lokal verschlüsselt gespeichert." else "Dieses Wissen konnte aus Sicherheitsgründen nicht gespeichert werden."
-            if (saved) { lastCandidate = null; remember.isEnabled = false }
+        }
+        feedback.setOnClickListener {
+            val note = EditText(this).apply {
+                hint = "Was war hilfreich, unklar oder falsch? (optional)"
+                minLines = 2
+                maxLines = 5
+            }
+            AlertDialog.Builder(this)
+                .setTitle("Antwort bewerten")
+                .setMessage("Deine Rückmeldung wird nur nach einer Speicher-Auswahl lokal verschlüsselt abgelegt. Lia prüft sie später als Hinweis, nicht als Tatsache. Abbrechen speichert nichts.")
+                .setView(note)
+                .setNeutralButton("Hilfreich speichern") { _, _ ->
+                    val text = note.text.toString().trim().take(500).ifBlank { "Antwort war hilfreich" }
+                    val saved = runCatching { adaptiveLearning.record(LearningFeedbackSignal("Hilfreich: $text", positive = true)) }.isSuccess
+                    reply.text = if (saved) "Danke. Deine Rückmeldung wurde lokal gespeichert."
+                        else "Die Rückmeldung konnte nicht sicher gespeichert werden."
+                }
+                .setPositiveButton("Kritik speichern") { _, _ ->
+                    val text = note.text.toString().trim().take(500).ifBlank { "Antwort bitte erneut prüfen" }
+                    val saved = runCatching {
+                        adaptiveLearning.record(LearningFeedbackSignal("Kritik: $text", positive = false))
+                    }.isSuccess
+                    reply.text = if (saved) "Danke. Lia berücksichtigt deine Kritik künftig als prüfbaren Hinweis."
+                        else "Die Rückmeldung konnte nicht sicher gespeichert werden."
+                }
+                .setNegativeButton("Abbrechen", null)
+                .show()
         }
         exportBackup.setOnClickListener {
             promptBackupPassphrase("Sicherung verschlüsseln") { passphrase ->
@@ -321,7 +374,10 @@ class MainActivity : Activity() {
                     }.show()
             }
         }
-        content.addView(title); content.addView(status); content.addView(installModel); content.addView(exportBackup); content.addView(importBackup); content.addView(chat, LinearLayout.LayoutParams(-1, -2)); content.addView(listen); content.addView(send); content.addView(reply); content.addView(remember); content.addView(question); content.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); content.addView(dailyListen); content.addView(save); content.addView(skip); content.addView(web); content.addView(admin); setContentView(root)
+        exportBackup.isEnabled = backupRecoveryHealthy
+        importBackup.isEnabled = backupRecoveryHealthy
+        if (!backupRecoveryHealthy) reply.text = "Eine unterbrochene Wiederherstellung wird beim nächsten Start erneut repariert. Lernprofile sind bis dahin gesperrt."
+        content.addView(title); content.addView(status); content.addView(installModel); content.addView(exportBackup); content.addView(importBackup); content.addView(chat, LinearLayout.LayoutParams(-1, -2)); content.addView(listen); content.addView(send); content.addView(reply); content.addView(remember); content.addView(feedback); content.addView(question); content.addView(answer, LinearLayout.LayoutParams(-1, 0, 1f)); content.addView(dailyListen); content.addView(save); content.addView(skip); content.addView(web); content.addView(admin); setContentView(root)
         uiScope.launch {
             val modelLoaded = runtimeBootstrap.loadInstalled(localRuntime)
             if (modelLoaded) status.text = "Lokale KI aktiv\n" + offlineStatusText.substringAfter('\n')
@@ -367,16 +423,28 @@ class MainActivity : Activity() {
                             val archive = readBackupArchive(uri)
                             val payload = EncryptedBackupArchive.decrypt(archive, passphrase)
                             val snapshot = LearningDataBackup.decode(payload)
-                            check(profile.validateBackupSnapshot(snapshot.profile)) { "Profil in Sicherung ist ungültig." }
-                            check(confirmedKnowledge.validateBackupSnapshot(snapshot.confirmedKnowledge)) { "Wissensdaten in Sicherung sind ungültig." }
-                            check(profile.restoreBackupSnapshot(snapshot.profile)) { "Profil konnte nicht wiederhergestellt werden." }
-                            check(confirmedKnowledge.restoreBackupSnapshot(snapshot.confirmedKnowledge)) { "Wissen konnte nicht wiederhergestellt werden." }
+                            backupRestoreCoordinator.restore(snapshot)
                         }
                     }
                     passphrase.fill('\u0000')
-                    Toast.makeText(this@MainActivity,
-                        if (restored.isSuccess) "Lernantworten und bestätigtes Wissen wiederhergestellt." else "Wiederherstellung fehlgeschlagen. Vorhandene Daten blieben erhalten.",
-                        Toast.LENGTH_LONG).show()
+                    val restoreStatus = restored.getOrNull()
+                    if (restoreStatus == LearningDataRestoreStatus.RECOVERY_REQUIRED) {
+                        backupRecoveryHealthy = false
+                    }
+                    val message = when (restoreStatus) {
+                        LearningDataRestoreStatus.RESTORED -> "Lernantworten und bestätigtes Wissen wiederhergestellt."
+                        LearningDataRestoreStatus.INVALID_BACKUP -> "Die Sicherung ist ungültig. Vorhandene Daten blieben unverändert."
+                        LearningDataRestoreStatus.ROLLED_BACK -> "Wiederherstellung fehlgeschlagen; die vorherigen Daten wurden zurückgespielt."
+                        LearningDataRestoreStatus.RECOVERY_REQUIRED -> "Wiederherstellung unterbrochen. Lia versucht beim nächsten Start automatisch, die vorherigen Daten wiederherzustellen."
+                        else -> "Wiederherstellung fehlgeschlagen; bitte Sicherung und Speicher prüfen."
+                    }
+                    if (!backupRecoveryHealthy) {
+                        exportBackup.isEnabled = false
+                        importBackup.isEnabled = false
+                        remember.isEnabled = false
+                        save.isEnabled = false
+                    }
+                    Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
                 }
             }
             return

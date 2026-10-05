@@ -36,6 +36,7 @@ class AdminActivity : Activity() {
         val secureStore = AndroidSecureStore(this)
         val budgetStore = RestartBudgetStore(secureStore)
         val retainedKnowledge = ConfirmedKnowledgeRepository(secureStore)
+        val adaptiveLearning = AdaptiveLearningService(LearningEvolutionStore(secureStore), secureStore)
         val modelStorage = ModelStorageLocator.forContext(this)
         val modelStorageReport = ModelStorageReporter.forDirectory(modelStorage)
         val destructiveGuard = AdminDestructiveActionGuard()
@@ -139,7 +140,8 @@ class AdminActivity : Activity() {
                 return@setOnClickListener
             }
             profile.deleteAll()
-            status.text="Lernprofil gelöscht."
+            adaptiveLearning.reset()
+            status.text="Lernprofil und gespeicherte Antwort-Rückmeldungen gelöscht."
             refresh()
         }
         budgetApply.setOnClickListener {
