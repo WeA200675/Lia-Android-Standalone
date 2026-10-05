@@ -12,6 +12,7 @@ class ResponseBehaviorTest {
         assertTrue(ResponseBehavior.isCritiqueOrCorrection("Das stimmt so nicht; prüfe es bitte."))
         assertTrue(ResponseBehavior.isCritiqueOrCorrection("Du liegst daneben."))
         assertTrue(ResponseBehavior.isCritiqueOrCorrection("Deine Antwort ist nicht korrekt."))
+        assertTrue(ResponseBehavior.isCritiqueOrCorrection("Du hast mich nicht verstanden."))
         assertFalse(ResponseBehavior.isCritiqueOrCorrection("Was weißt du über Blumen?"))
     }
 
