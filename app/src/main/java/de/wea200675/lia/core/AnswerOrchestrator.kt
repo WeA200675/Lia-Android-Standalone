@@ -21,7 +21,7 @@ class AnswerOrchestrator(
     private val router: ConversationRouter = ConversationRouter(),
     private val confirmedKnowledge: ConfirmedKnowledgeRepository? = null
 ) {
-    suspend fun answer(userText: String, prompt: String): OrchestratedAnswer {
+    suspend fun answer(\n        userText: String,\n        prompt: String,\n        previousAssistantText: String? = null\n    ): OrchestratedAnswer {
         val boundedText = userText.trim().take(2000)
         if (SafetyPolicy.requiresHumanHelp(boundedText)) {
             return OrchestratedAnswer(SafetyPolicy.responseForRisk(), AnswerSource.SAFETY)
@@ -109,6 +109,11 @@ class AnswerOrchestrator(
                 webContextUsed = true,
                 knowledgeProvenance = retainedResult.second
             )
+        }
+
+        val feedbackFallback = ResponseBehavior.offlineFeedbackReply(boundedText, previousAssistantText)
+        if (feedbackFallback != null) {
+            return OrchestratedAnswer(feedbackFallback, AnswerSource.OFFLINE_FALLBACK)
         }
 
         return OrchestratedAnswer(
