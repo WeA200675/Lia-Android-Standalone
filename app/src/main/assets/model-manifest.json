@@ -23,6 +23,8 @@
     "ram_plus_not_counted": true,
     "primary_profile": "4b-q4",
     "fallback_profile": "0.6b-q8_0",
-    "notes": "4B Q4 model is recommended after manual download and SHA-256 verification; no automatic download."
+    "notes": "4B Q4 model is recommended after manual download and SHA-256 verification; no automatic download.",
+    "download_url": "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf?download=true",
+    "download_note": "Nur vom Tablet aus öffnen; nach Abschluss über den Lia-Admin-Import auswählen und hash-verifizieren."
   }
 }
