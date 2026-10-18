@@ -16,5 +16,13 @@
       "license_url": "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF",
       "status": "optional; manually imported, hash-verified, and device acceptance pending"
     }
-  ]
+  ],
+  "recommendation": {
+    "device": "Samsung SM-X135F",
+    "real_ram_gb": 8,
+    "ram_plus_not_counted": true,
+    "primary_profile": "4b-q4",
+    "fallback_profile": "0.6b-q8_0",
+    "notes": "4B Q4 model is recommended after manual download and SHA-256 verification; no automatic download."
+  }
 }
