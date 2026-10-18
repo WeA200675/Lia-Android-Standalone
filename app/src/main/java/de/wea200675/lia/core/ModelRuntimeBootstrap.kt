@@ -1,32 +1,27 @@
 package de.wea200675.lia.core
 
 import android.content.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
-/** Safe app-start boundary for manifest loading, verified model selection and offline fallback. */
+/** Creates an empty safe runtime immediately; model verification/loading is explicitly asynchronous. */
 class ModelRuntimeBootstrap(
     private val context: Context,
     private val modelDirectory: File = ModelStorageLocator.forContext(context).directory
 ) {
-    fun create(): ResilientLocalRuntime {
-        val fallback = ResilientLocalRuntime(UnavailableNativeInference())
-        if (!ModelRuntimeAdmission.canStart(ModelStorageReporter.forDirectory(ModelStorageLocator.forContext(context)))) return fallback
-        return runCatching {
-            val manifest = ModelManifestLoader(context).load()
-            LocalRuntimeFactory(modelDirectory).create(manifest)
-        }.getOrElse { fallback }
-    }
+    fun create(): LocalModelRuntime = LocalModelRuntime()
 
-    fun createSupervised(): SupervisedLocalRuntime {
-        val primary = ModelSpec("bootstrap-primary", "bootstrap-primary.gguf", "0".repeat(64), 512)
-        val recovery = ModelSpec("bootstrap-recovery", "bootstrap-recovery.gguf", "1".repeat(64), 512)
-        val budget = RestartBudgetStore(AndroidSecureStore(context)).load()
-        val coordinator = RuntimeCoordinator(primary, recovery, maxRestarts = budget)
-        return SupervisedLocalRuntime({
-            runCatching {
-                val manifest = ModelManifestLoader(context).load()
-                LocalRuntimeFactory(modelDirectory).create(manifest)
-            }.getOrElse { ResilientLocalRuntime(UnavailableNativeInference()) }
-        }, coordinator)
+    fun createSupervised(): LocalModelRuntime = create()
+
+    suspend fun loadInstalled(runtime: LocalModelRuntime): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            if (!ModelRuntimeAdmission.canStart(ModelStorageReporter.forDirectory(ModelStorageLocator.forContext(context)))) {
+                return@runCatching false
+            }
+            val entry = ModelCatalog.entries.first()
+            val model = ModelInstaller(context, modelDirectory).installedFile(entry) ?: return@runCatching false
+            runtime.load(entry.spec(), model)
+        }.getOrDefault(false)
     }
 }

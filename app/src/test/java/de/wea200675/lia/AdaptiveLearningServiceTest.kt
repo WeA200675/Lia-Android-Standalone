@@ -33,6 +33,16 @@ class AdaptiveLearningServiceTest {
         assertEquals(1, oversized.acceptedSignals)
     }
 
+    @Test fun approvedFeedbackIsAvailableAsBoundedPromptContext() {
+        val store = MemoryStore()
+        val service = AdaptiveLearningService(LearningEvolutionStore(store), store)
+        service.record(LearningFeedbackSignal("Kritik: meine Mail test@example.org war falsch", positive = false))
+        val context = service.recentFeedback()
+        assertEquals(1, context.size)
+        assertTrue(context.single().contains("[E-MAIL]"))
+        assertFalse(context.single().contains("test@example.org"))
+    }
+
     @Test fun resetRemovesHistoryAndEvolution() {
         val store = MemoryStore()
         val service = AdaptiveLearningService(LearningEvolutionStore(store), store)

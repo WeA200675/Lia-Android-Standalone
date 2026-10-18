@@ -1,24 +1,25 @@
 # Roadmap-Punkte 6–10
 
-Diese fünf Phasen bilden den nächsten Integrationsblock. Die App darf eine Phase
-erst als abgeschlossen anzeigen, wenn die zugehörigen Nachweise wirklich
-vorliegen. Fehlende native Bibliotheken, GGUF-Dateien oder Samsung-Hardware
-werden nicht simuliert.
+Diese Phasen werden nur dann als abgeschlossen markiert, wenn die genannten
+Nachweise vorliegen. Fehlende Samsung-Hardware und Produktionsschlüssel werden
+nicht simuliert.
 
-| Punkt | Inhalt | Nachweis |
-|---|---|---|
-| 6 | Native Android-LLM-Artefakte | signierte ABI-Artefakte, Modellmanifest, SHA-256-Prüfung und Starttest |
-| 7 | Vollständige App-Integration | Main-/Admin-Flows, Lernfeedback, Offline-Fallback und verschlüsselte Zustände |
-| 8 | Anonymisiertes Wissensgateway | Datenminimierung, Einwilligungs-/Policy-Prüfung, Quellenprovenienz und Offline-Kaskade |
-| 9 | Samsung-Abnahme | Android-16-Gerätetest, Kiosk-/WLAN-Konfiguration, Audio, Rotation und Wiederanlauf |
-| 10 | Release- und Recovery-Härtung | reproduzierbarer APK-Build, Signatur-/Digest-Prüfung, Backup/Restore und Fehler-Injektion |
+| Punkt | Inhalt | Implementiert | Noch offen |
+|---|---|---|---|
+| 6 | Lokale Android-KI | llama.cpp aus gepinntem MIT-Quellstand, JNI CPU-Inferenz, Qwen3 GGUF-Katalog mit Apache-2.0, Nutzerimport in App-Speicher und SHA-256-Verifikation; NDK-Build für beide ABIs in CI #361 grün | Offline-Inferenz, Speicher/Hitze und echte Antwort auf Emulator und Zielgerät prüfen |
+| 7 | App-Integration | Modellstatus, Importdialog, nativer Runtime-Pfad, Text-Fallback; JVM und Debug-APK CI #361 grün | Emulatorlauf, Start/Ladezeit, Lifecycle und Wiederherstellung testen |
+| 8 | Anonymisiertes Wissensgateway | standardmäßig offline; explizite widerrufbare Einwilligung; generische Fragen als einzige Onlinefreigabe | Android-Netzwerkfluss, Quellenprovenienz und Widerruf praktisch abnehmen |
+| 9 | Samsung-Abnahme | nicht begonnen, Zielgerät fehlt | Kiosk/WLAN, Audio, Rotation, Berechtigungsablehnung, Laufzeit und Thermik |
+| 10 | Release- und Recovery-Härtung | CI-Digest für Debug-APK, Open-Source-Lizenzen, passwortgeschützter Export/Wiederherstellung von Lernprofil plus bestätigtem Wissen; Archivtests in CI #361 grün | Fehler-Injection auf Gerät, reproduzierbarer Release, Signatur und Geräteevidence |
 
-## Sicherheitsregeln
+## Lokale KI: Herkunft und Auslieferung
 
-- Kein Netzwerkzugriff ohne die bestehende Policy-Entscheidung.
-- Keine persönlichen Daten im anonymisierten Gateway.
-- Keine automatische Freigabe ungeprüfter Modelle oder nativer Bibliotheken.
-- Hardware- und Artefaktphasen bleiben offen, bis ein überprüfbarer Nachweis
-  aus CI oder dem realen Samsung-Gerät vorliegt.
+- Runtime: [ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp), Commit
+  `2e7c58c5477478c8cf6e199cfaa5dcd5a4319c81`, MIT.
+- Modellkandidat: [Qwen3-0.6B-GGUF Q8_0](https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/blob/main/Qwen3-0.6B-Q8_0.gguf), Apache-2.0.
+- SHA-256: `9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031`.
+- Modellgewichte sind nicht im Git-Repository oder APK enthalten. Der Nutzer wählt die Datei selbst; die App kopiert sie privat und aktiviert sie nur nach Hashprüfung.
+- Kein Modellnetzwerkzugriff und kein Cloud-Inferenzpfad. Persönliche Eingaben laufen durch lokale Inferenz oder den lokalen Grundmodus.
+- Drittanbieterhinweise liegen in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) und im App-Asset.
 
-Die Nachweise werden in CI erneut geprüft, bevor PR #116 zusammengeführt wird.
+Das Backupformat verwendet PBKDF2-HMAC-SHA256 und AES-256-GCM; es ist begrenzt, versioniert und akzeptiert Passphrasen von mindestens 12 Zeichen. Inhalte werden erst nach erfolgreicher Authentifizierung und vollständiger Validierung wiederhergestellt. Das Backup enthält Lernprofil und bestätigtes Wissen, nicht die separat heruntergeladenen Modellgewichte.\n\nJeder CI-Lauf prüft JVM-Tests und den für den jeweiligen Stand konfigurierten Android-Build.

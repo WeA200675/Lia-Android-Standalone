@@ -53,6 +53,28 @@ class ConfirmedKnowledgeRepository(
     }
     fun clear() = store.delete(key)
 
+    /** Snapshot is plaintext in memory and must only be placed inside EncryptedBackupArchive. */
+    fun exportBackupSnapshot(): ByteArray = serialize(all())
+
+    fun validateBackupSnapshot(snapshot: ByteArray): Boolean = runCatching {
+        require(snapshot.size <= maxBytes)
+        if (snapshot.isEmpty()) return@runCatching true
+        val items = snapshot.toString(StandardCharsets.UTF_8).lineSequence()
+            .filter(String::isNotBlank).map(::decode).map { validateStored(it) ?: error("Invalid entry") }.toList()
+        require(items.size <= maxEntries)
+        require(items.distinctBy { it.fingerprint }.size == items.size)
+        require(items.all { it.expiresAtEpochMs > clock() })
+        require(serialize(items).size <= maxBytes)
+    }.isSuccess
+
+    fun restoreBackupSnapshot(snapshot: ByteArray): Boolean {
+        if (!validateBackupSnapshot(snapshot)) return false
+        val items = if (snapshot.isEmpty()) emptyList() else snapshot.toString(StandardCharsets.UTF_8)
+            .lineSequence().filter(String::isNotBlank).map(::decode).mapNotNull(::validateStored).toList()
+        persist(prune(items, clock()))
+        return true
+    }
+
     private fun loadInternal(now: Long): List<ConfirmedKnowledge> {
         // Keystore authentication/tamper failures must propagate; treating them as an empty store would hide corruption.
         val raw = store.get(key) ?: return emptyList()

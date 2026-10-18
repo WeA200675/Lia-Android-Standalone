@@ -21,7 +21,11 @@ class AnswerOrchestrator(
     private val router: ConversationRouter = ConversationRouter(),
     private val confirmedKnowledge: ConfirmedKnowledgeRepository? = null
 ) {
-    suspend fun answer(userText: String, prompt: String): OrchestratedAnswer {
+    suspend fun answer(
+        userText: String,
+        prompt: String,
+        previousAssistantText: String? = null
+    ): OrchestratedAnswer {
         val boundedText = userText.trim().take(2000)
         if (SafetyPolicy.requiresHumanHelp(boundedText)) {
             return OrchestratedAnswer(SafetyPolicy.responseForRisk(), AnswerSource.SAFETY)
@@ -94,8 +98,15 @@ class AnswerOrchestrator(
         }
 
         if (webContext != null) {
+            val citedFeedbackText = when {
+                ResponseBehavior.isCritiqueOrCorrection(boundedText) ->
+                    "Danke, ich prüfe den Hinweis anhand der verfügbaren Quelle. $webContext"
+                ResponseBehavior.asksForCertainty(boundedText) ->
+                    "Eine verfügbare Quelle dazu nennt: $webContext"
+                else -> webContext
+            }
             return OrchestratedAnswer(
-                text = webContext,
+                text = citedFeedbackText,
                 source = if (retainedResult != null) AnswerSource.CONFIRMED_KNOWLEDGE else AnswerSource.OFFLINE_FALLBACK,
                 webContextUsed = true,
                 knowledgeProvenance = webResult?.second
@@ -109,6 +120,11 @@ class AnswerOrchestrator(
                 webContextUsed = true,
                 knowledgeProvenance = retainedResult.second
             )
+        }
+
+        val feedbackFallback = ResponseBehavior.offlineFeedbackReply(boundedText, previousAssistantText)
+        if (feedbackFallback != null) {
+            return OrchestratedAnswer(feedbackFallback, AnswerSource.OFFLINE_FALLBACK)
         }
 
         return OrchestratedAnswer(

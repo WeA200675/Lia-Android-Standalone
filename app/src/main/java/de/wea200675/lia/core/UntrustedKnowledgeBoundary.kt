@@ -9,6 +9,7 @@ object UntrustedKnowledgeBoundary {
     private val bidiControls = Regex("""[\u202A-\u202E\u2066-\u2069]""")
     private val instructionPatterns = listOf(
         Regex("""ignore\s+(all\s+)?previous\s+instructions?""", RegexOption.IGNORE_CASE),
+        Regex("""ignoriere\s+(alle\s+)?vorherigen?\s+anweisungen?""", RegexOption.IGNORE_CASE),
         Regex("""(system|developer)\s*(prompt|message)""", RegexOption.IGNORE_CASE),
         Regex("""(führe|execute|run)\s+.{0,24}(befehl|command|code)""", RegexOption.IGNORE_CASE),
         Regex("""du\s+bist\s+jetzt""", RegexOption.IGNORE_CASE),

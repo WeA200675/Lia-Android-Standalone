@@ -1,14 +1,28 @@
 # Lia-Android-Standalone
-Autarke Android-App namens „Lia“, eine empathische, geduldige und herzliche Alltagsbegleiterin für eine 84-jährige Dame.
+
+Autarke Android-App namens „Lia“, eine geduldige deutschsprachige Alltagsbegleiterin.
 
 ## Aktueller Stand
-Die App enthält eine große Offline-Oberfläche, tägliche Fragen, CPU/SMT-Erkennung, Keystore-Grundlage und eine lokale Modell-Laufzeitschnittstelle mit sicherem Text-Fallback.
+
+Die App enthält eine Offline-Oberfläche, verschlüsselte Erinnerungen, Tagesfragen,
+Spracheingabe/-ausgabe, ein standardmäßig deaktiviertes Wissensgateway und eine
+lokale Modelllaufzeit mit Text-Fallback. Die native llama.cpp-Runtime ist in den
+Android-Build integriert. Ein offenes Qwen3-Modell kann separat installiert und
+wird nur nach SHA-256-Prüfung aktiviert. Lernprofil und bestätigtes lokales Wissen lassen sich in eine passwortgeschützte Sicherung exportieren und auf einem anderen Gerät wiederherstellen.
 
 ## Prinzipien
-- Kein PC erforderlich.
-- Persönliche Antworten bleiben lokal und verschlüsselt.
-- Internet ist nur über ein anonymisierendes, ausdrücklich freigegebenes Gateway vorgesehen.
-- Das Grundmodell wird nicht unkontrolliert selbsttrainiert; bestätigte Erinnerungen und Präferenzen werden separat gelernt.
-- Modelle müssen vor Ausführung hash-geprüft werden.
 
-Weitere Installations- und Abnahmeschritte folgen pro Meilenstein.
+- Persönliche Eingaben bleiben auf dem Gerät.
+- Es gibt keine Cloud-Inferenz und keine automatischen Modelldownloads.
+- Sicherungen sind mit einer eigenen Passphrase verschlüsselt; Lia speichert oder überträgt diese Passphrase nicht.
+- Webzugriff verlangt eine ausdrückliche, widerrufbare Einwilligung und ist auf
+  allgemeine Wissensfragen begrenzt.
+- Bestätigte Erinnerungen werden separat und verschlüsselt gespeichert.
+- Projektcode steht unter MIT; llama.cpp und das optionale Qwen-Modell haben
+  eigene Drittanbieterlizenzen. Siehe [Drittanbieterhinweise](THIRD_PARTY_NOTICES.md).
+
+## Bauen und Abnahme
+
+Siehe [Build-Anleitung](docs/BUILD_AND_INSTALL.md), [Abnahmekriterien](docs/ACCEPTANCE.md)
+und [Roadmap](docs/ROADMAP.md). Modellgewichte sind nicht im Repository oder APK
+enthalten. Geräte- und Releaseabnahmen bleiben offen, bis ihre Nachweise vorliegen.
