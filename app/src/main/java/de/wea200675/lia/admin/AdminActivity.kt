@@ -30,6 +30,7 @@ import de.wea200675.lia.core.ModelManifestLoader
 import de.wea200675.lia.core.ModelRegistry
 import de.wea200675.lia.core.ModelInstaller
 import de.wea200675.lia.core.ModelCatalog
+import de.wea200675.lia.core.ModelCatalogEntry
 import de.wea200675.lia.core.AdminDestructiveAction
 import de.wea200675.lia.core.AdminDestructiveActionGuard
 
@@ -40,6 +41,8 @@ class AdminActivity : Activity() {
     private val sessionHandler = Handler(Looper.getMainLooper())
     private val expireSession = Runnable { concealAdminContent?.invoke() }
     private var concealAdminContent: (() -> Unit)? = null
+    private lateinit var modelInstaller: de.wea200675.lia.core.ModelInstaller
+    private lateinit var modelEntry: ModelCatalogEntry
     override fun onCreate(state:Bundle?) {
         super.onCreate(state); kiosk=KioskController(this); profile=EncryptedLearningProfile(this)
         val secureStore = AndroidSecureStore(this)
@@ -64,8 +67,8 @@ class AdminActivity : Activity() {
         }.getOrDefault(false)
         val modelStorage = ModelStorageLocator.forContext(this)
         val modelStorageReport = ModelStorageReporter.forDirectory(modelStorage)
-        val modelInstaller = ModelInstaller(this, modelStorage.directory)
-        val modelEntry = ModelCatalog.entries.first()
+        modelInstaller = ModelInstaller(this, modelStorage.directory)
+        modelEntry = ModelCatalog.entries.first()
         val destructiveGuard = AdminDestructiveActionGuard()
         val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setPadding(32,32,32,32) }
         val title=TextView(this).apply { text="Lia Admin"; textSize=32f; gravity=Gravity.CENTER }
