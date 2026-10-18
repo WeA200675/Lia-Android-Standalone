@@ -217,7 +217,7 @@ class AdminActivity : Activity() {
             refresh()
         }
         val scroll=ScrollView(this).apply { addView(box) }
-        setContentView(scroll); if (intent.getBooleanExtra("admin_authorized", false)) { session.unlock(); setup.isEnabled=false; setupPin.isEnabled=false; setupConfirm.isEnabled=false; pin.isEnabled=false }; refresh()
+        setContentView(scroll); if (intent.getBooleanExtra("admin_authorized", false)) { session.unlock(); setup.isEnabled=false; setupPin.isEnabled=false; setupConfirm.isEnabled=false; pin.isEnabled=true; pin.requestFocus() }; refresh()
     }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
