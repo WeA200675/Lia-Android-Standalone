@@ -28,7 +28,8 @@ import de.wea200675.lia.core.ModelStorageLocator
 import de.wea200675.lia.core.ModelStorageReporter
 import de.wea200675.lia.core.ModelManifestLoader
 import de.wea200675.lia.core.ModelRegistry
-import de.wea200675.lia.core.TabletModelImporter
+import de.wea200675.lia.core.ModelInstaller
+import de.wea200675.lia.core.ModelCatalog
 import de.wea200675.lia.core.AdminDestructiveAction
 import de.wea200675.lia.core.AdminDestructiveActionGuard
 
@@ -63,9 +64,8 @@ class AdminActivity : Activity() {
         }.getOrDefault(false)
         val modelStorage = ModelStorageLocator.forContext(this)
         val modelStorageReport = ModelStorageReporter.forDirectory(modelStorage)
-        val modelRegistry = ModelRegistry(this)
-        val modelManifest = ModelManifestLoader(this).load()
-        val modelImporter = TabletModelImporter(contentResolver, modelRegistry, modelManifest)
+        val modelInstaller = ModelInstaller(this, modelStorage.directory)
+        val modelEntry = ModelCatalog.entries.first()
         val destructiveGuard = AdminDestructiveActionGuard()
         val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setPadding(32,32,32,32) }
         val title=TextView(this).apply { text="Lia Admin"; textSize=32f; gravity=Gravity.CENTER }
@@ -235,9 +235,9 @@ class AdminActivity : Activity() {
         if (requestCode == 78 && resultCode == RESULT_OK) {
             val uri = data?.data ?: return
             Thread {
-                val result = modelImporter.import(uri)
+                val result = modelInstaller.install(uri, modelEntry)
                 runOnUiThread {
-                    Toast.makeText(this, result.message, Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, result.error ?: "Modell importiert und verifiziert.", Toast.LENGTH_LONG).show()
                 }
             }.start()
         }
