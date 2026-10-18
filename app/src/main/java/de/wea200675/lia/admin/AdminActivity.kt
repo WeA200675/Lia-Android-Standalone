@@ -26,6 +26,11 @@ import de.wea200675.lia.core.ConfirmedKnowledgeIntegrityRuntime
 import de.wea200675.lia.core.KnowledgeIntegrityState
 import de.wea200675.lia.core.ModelStorageLocator
 import de.wea200675.lia.core.ModelStorageReporter
+import de.wea200675.lia.core.ModelManifestLoader
+import de.wea200675.lia.core.ModelRegistry
+import de.wea200675.lia.core.ModelInstaller
+import de.wea200675.lia.core.ModelCatalog
+import de.wea200675.lia.core.ModelCatalogEntry
 import de.wea200675.lia.core.AdminDestructiveAction
 import de.wea200675.lia.core.AdminDestructiveActionGuard
 
@@ -36,6 +41,8 @@ class AdminActivity : Activity() {
     private val sessionHandler = Handler(Looper.getMainLooper())
     private val expireSession = Runnable { concealAdminContent?.invoke() }
     private var concealAdminContent: (() -> Unit)? = null
+    private lateinit var modelInstaller: de.wea200675.lia.core.ModelInstaller
+    private lateinit var modelEntry: ModelCatalogEntry
     override fun onCreate(state:Bundle?) {
         super.onCreate(state); kiosk=KioskController(this); profile=EncryptedLearningProfile(this)
         val secureStore = AndroidSecureStore(this)
@@ -60,6 +67,8 @@ class AdminActivity : Activity() {
         }.getOrDefault(false)
         val modelStorage = ModelStorageLocator.forContext(this)
         val modelStorageReport = ModelStorageReporter.forDirectory(modelStorage)
+        modelInstaller = ModelInstaller(this, modelStorage.directory)
+        modelEntry = ModelCatalog.entries.first()
         val destructiveGuard = AdminDestructiveActionGuard()
         val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setPadding(32,32,32,32) }
         val title=TextView(this).apply { text="Lia Admin"; textSize=32f; gravity=Gravity.CENTER }
@@ -71,6 +80,7 @@ class AdminActivity : Activity() {
         val lockNow=Button(this).apply { text="Jetzt sperren"; textSize=20f }
         val wifi=Button(this).apply { text="WLAN-Einstellungen öffnen"; textSize=20f }
         val background=Button(this).apply { text="Hintergrundbild auswählen"; textSize=18f }
+        val importModel=Button(this).apply { text="Sprachmodell aus Dateien importieren"; textSize=18f }
         val review=TextView(this).apply { textSize=18f; setPadding(0,24,0,12) }
         val confirm=Button(this).apply { text="Alle gespeicherten Punkte bestätigen"; textSize=18f }
         val clear=Button(this).apply { text="Lernprofil vollständig löschen"; textSize=18f }
@@ -159,6 +169,10 @@ class AdminActivity : Activity() {
         }
         lockNow.setOnClickListener { if (!requireAdmin()) return@setOnClickListener; kiosk.enable(); status.text="Kiosk-Modus wieder aktiviert."; concealAdminContent?.invoke() }
         wifi.setOnClickListener { if(!requireAdmin()) return@setOnClickListener; startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }
+        importModel.setOnClickListener {
+            if (!requireAdmin()) return@setOnClickListener
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type = "application/octet-stream"; addCategory(Intent.CATEGORY_OPENABLE); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }, 78)
+        }
         background.setOnClickListener {
             if (!requireAdmin()) return@setOnClickListener
             startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type = "image/*"; addCategory(Intent.CATEGORY_OPENABLE); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) }, 77)
@@ -205,7 +219,7 @@ class AdminActivity : Activity() {
             refresh()
         }
         voiceRate.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener { override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) { val rate = 0.5f + value * 0.1f; voiceRateStatus.text = "Sprechtempo: %.1fx".format(rate); getSharedPreferences("lia_voice", MODE_PRIVATE).edit().putFloat("speech_rate", rate).apply() }; override fun onStartTrackingTouch(seekBar: SeekBar?) {}; override fun onStopTrackingTouch(seekBar: SeekBar?) {} })
-        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(setupPin); box.addView(setupConfirm); box.addView(setup); box.addView(lockNow); box.addView(voiceRateStatus); box.addView(voiceRate); box.addView(wifi); box.addView(background); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(knowledgeReset); box.addView(retainedStatus); box.addView(retainedClear); box.addView(status)
+        box.addView(title); box.addView(pin); box.addView(unlock); box.addView(setupPin); box.addView(setupConfirm); box.addView(setup); box.addView(lockNow); box.addView(voiceRateStatus); box.addView(voiceRate); box.addView(wifi); box.addView(importModel); box.addView(background); box.addView(review); box.addView(confirm); box.addView(clear); box.addView(budgetStatus); box.addView(budgetInput); box.addView(budgetApply); box.addView(budgetReset); box.addView(knowledgeStatus); box.addView(knowledgeReset); box.addView(retainedStatus); box.addView(retainedClear); box.addView(status)
         concealAdminContent = {
             sessionHandler.removeCallbacks(expireSession)
             session.lock()
@@ -221,6 +235,15 @@ class AdminActivity : Activity() {
     }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 78 && resultCode == RESULT_OK) {
+            val uri = data?.data ?: return
+            Thread {
+                val result = modelInstaller.install(uri, modelEntry)
+                runOnUiThread {
+                    Toast.makeText(this, result.error ?: "Modell importiert und verifiziert.", Toast.LENGTH_LONG).show()
+                }
+            }.start()
+        }
         if (requestCode == 77 && resultCode == RESULT_OK) {
             val uri = data?.data ?: return
             try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: SecurityException) {}
